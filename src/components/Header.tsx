@@ -121,15 +121,17 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
       {/* Top Banner / Membrete Institucional */}
       <div className="bg-gradient-to-r from-[#073262] via-[#0B4D94] to-[#1E6BB8] text-white px-4 py-2.5">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          {/* Logos and Title */}
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="flex items-center gap-2 bg-white/10 p-1.5 rounded-lg backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-4">
+          {/* Responsive Header Structure */}
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 w-full sm:w-auto text-center sm:text-left">
+            {/* Logos: In mobile they appear alone on top centered; in desktop they are on the left */}
+            <div className="flex items-center justify-center gap-3 bg-white/10 px-3 py-1.5 rounded-xl backdrop-blur-sm shadow-xs mx-auto sm:mx-0">
               <img
                 src="https://pub-e4f5b0a4105248f090453c5e81b8348f.r2.dev/img/LOGO_UPTPC.png"
                 alt="Logo UPTPC"
                 className="h-10 sm:h-12 w-auto object-contain filter drop-shadow"
               />
+              <div className="h-6 w-px bg-white/20 sm:hidden"></div>
               <img
                 src="https://pub-e4f5b0a4105248f090453c5e81b8348f.r2.dev/img/logoRECTORADO.png"
                 alt="Logo Rectorado"
@@ -137,16 +139,17 @@ export const Header: React.FC<HeaderProps> = ({
               />
             </div>
 
-            <div>
-              <p className="text-[10px] sm:text-xs font-semibold tracking-wider uppercase text-blue-100">
+            {/* Below logos on mobile, beside logos on desktop */}
+            <div className="space-y-0.5 max-w-full px-1 sm:px-0">
+              <p className="text-[10px] sm:text-xs font-semibold tracking-wider uppercase text-blue-100 leading-tight">
                 UNIVERSIDAD POLITECNICA TERRITORIAL DE PUERTO CABELLO
               </p>
-              <h1 className="text-sm sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+              <h1 className="text-xs sm:text-lg font-bold tracking-tight text-white flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
                 <span>PEI</span>
-                <span className="text-xs sm:text-sm font-normal text-blue-100 hidden sm:inline">
+                <span className="text-[11px] sm:text-sm font-medium text-blue-100">
                   — Programa De Evaluación Institucional
                 </span>
-                <span className="bg-amber-400 text-slate-900 text-[10px] font-bold px-1.5 py-0.5 rounded ml-1 shadow-sm">
+                <span className="bg-amber-400 text-slate-950 text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded shadow-xs uppercase">
                   RECTORADO
                 </span>
               </h1>
@@ -154,7 +157,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Quick Search & User Auth Actions */}
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end pt-1 sm:pt-0 border-t border-white/10 sm:border-none">
             <form onSubmit={handleSearchSubmit} className="relative flex-1 sm:w-60">
               <input
                 type="text"

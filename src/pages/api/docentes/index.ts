@@ -122,11 +122,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Check if carrera needs to be added to carreras table
+      const cleanTipoProfesion = (tipo_profesion && typeof tipo_profesion === 'string' && tipo_profesion.trim())
+        ? tipo_profesion.trim().toUpperCase()
+        : 'OTRO';
+
       if (carrera_pregrado && carrera_pregrado.trim().length > 0) {
         await db.execute({
           sql: 'INSERT OR IGNORE INTO carreras (nombre, tipo) VALUES (?, ?)',
-          args: [carrera_pregrado.trim(), tipo_profesion || 'OTRA'],
+          args: [carrera_pregrado.trim(), cleanTipoProfesion],
         });
+      }
+
+      // Store in profesiones table so it is available for other teachers
+      if (cleanTipoProfesion !== 'OTRO') {
+        try {
+          await db.execute(`
+            CREATE TABLE IF NOT EXISTS profesiones (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              nombre TEXT UNIQUE NOT NULL,
+              created_at TEXT DEFAULT (datetime('now'))
+            );
+          `);
+          await db.execute({
+            sql: 'INSERT OR IGNORE INTO profesiones (nombre) VALUES (?)',
+            args: [cleanTipoProfesion],
+          });
+        } catch (err) {
+          console.error('Error inserting into profesiones:', err);
+        }
       }
 
       const cleanCedula = cedula.trim().toUpperCase();
@@ -175,7 +198,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           id_parroquia || null,
           parroquia_nombre || null,
           direccion || null,
-          tipo_profesion || 'OTRO',
+          cleanTipoProfesion,
           carrera_pregrado || null,
           rama_especifica || null,
           universidad_pregrado || null,

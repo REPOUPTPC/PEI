@@ -16,6 +16,8 @@ import {
   RefreshCw,
   Award,
   Atom,
+  RotateCcw,
+  X,
 } from 'lucide-react';
 import {
   Docente,
@@ -30,6 +32,7 @@ import {
   ItemDiplomado,
 } from '@/lib/types';
 import { useToast } from './Toast';
+import { SearchableSelect } from './SearchableSelect';
 
 interface EncuestaFormProps {
   initialDocente?: Docente | null;
@@ -53,6 +56,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
   const [searchingCedula, setSearchingCedula] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'user' | 'environment'>('environment');
 
   // External reference data
   const [estados, setEstados] = useState<Estado[]>([]);
@@ -60,6 +64,15 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
   const [parroquias, setParroquias] = useState<Parroquia[]>([]);
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [pnfList, setPnfList] = useState<PNF[]>([]);
+  const [profesionesList, setProfesionesList] = useState<string[]>([
+    'INGENIERO',
+    'LICENCIADO',
+    'MEDICO',
+    'ARQUITECTO',
+    'ABOGADO',
+    'TSU',
+  ]);
+  const [otraProfesionInput, setOtraProfesionInput] = useState('');
 
   // Carrera autocomplete state
   const [carreraInput, setCarreraInput] = useState('');
@@ -144,6 +157,15 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       .then(r => r.json())
       .then(d => d.success && setPnfList(d.pnfs))
       .catch(console.error);
+
+    fetch('/api/profesiones')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && Array.isArray(d.profesiones)) {
+          setProfesionesList(d.profesiones);
+        }
+      })
+      .catch(console.error);
   }, []);
 
   // Cascading municipios
@@ -189,7 +211,13 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       setIdParroquia(initialDocente.id_parroquia || '');
       setDireccion(initialDocente.direccion || '');
 
-      setTipoProfesion(initialDocente.tipo_profesion || 'INGENIERO');
+      if (initialDocente.tipo_profesion) {
+        const tp = initialDocente.tipo_profesion.trim().toUpperCase();
+        setProfesionesList(prev => (prev.includes(tp) ? prev : [...prev, tp]));
+        setTipoProfesion(tp);
+      } else {
+        setTipoProfesion('INGENIERO');
+      }
       setCarreraPregrado(initialDocente.carrera_pregrado || '');
       setCarreraInput(initialDocente.carrera_pregrado || '');
       setRamaEspecifica(initialDocente.rama_especifica || '');
@@ -308,37 +336,78 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
   };
 
   // Direct WebCam Capture for Phone / Desktop Camera
-  const startCamera = async () => {
+  const startCamera = async (mode?: 'user' | 'environment') => {
+    const targetMode = mode || cameraFacingMode;
+    // Stop any existing stream tracks first
+    if (videoRef.current?.srcObject) {
+      const currentStream = videoRef.current.srcObject as MediaStream;
+      currentStream.getTracks().forEach(t => t.stop());
+    }
+
     setCameraActive(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: targetMode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
+      }
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.play();
       }
+      setCameraFacingMode(targetMode);
     } catch (err: any) {
-      showToast('error', 'No se pudo acceder a la cámara', 'Verifique los permisos de cámara en su navegador.');
+      showToast(
+        'error',
+        'No se pudo acceder a la cámara',
+        'Verifique los permisos de cámara en su navegador o utilice el botón "Subir Imagen".'
+      );
       setCameraActive(false);
     }
+  };
+
+  const toggleCameraFacingMode = () => {
+    const nextMode = cameraFacingMode === 'user' ? 'environment' : 'user';
+    setCameraFacingMode(nextMode);
+    startCamera(nextMode);
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(t => t.stop());
+    }
+    setCameraActive(false);
   };
 
   const capturePhoto = async () => {
     if (!videoRef.current) return;
     const canvas = document.createElement('canvas');
-    canvas.width = 480;
-    canvas.height = 480;
+    canvas.width = 640;
+    canvas.height = 640;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.drawImage(videoRef.current, 0, 0, 480, 480);
-    const base64Data = canvas.toDataURL('image/jpeg', 0.85);
+    // Draw square cropped image from center
+    const vWidth = videoRef.current.videoWidth || 640;
+    const vHeight = videoRef.current.videoHeight || 640;
+    const minDim = Math.min(vWidth, vHeight);
+    const startX = (vWidth - minDim) / 2;
+    const startY = (vHeight - minDim) / 2;
 
-    // Stop tracks
-    const stream = videoRef.current.srcObject as MediaStream;
-    stream?.getTracks().forEach(t => t.stop());
-    setCameraActive(false);
+    ctx.drawImage(videoRef.current, startX, startY, minDim, minDim, 0, 0, 640, 640);
+    const base64Data = canvas.toDataURL('image/jpeg', 0.88);
+
+    stopCamera();
 
     // Upload directly to Cloudflare R2
     setUploadingPhoto(true);
@@ -419,6 +488,25 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       return;
     }
 
+    let effectiveProfesion = tipoProfesion;
+    if (tipoProfesion === 'OTRO') {
+      const cleanOtra = otraProfesionInput.trim().toUpperCase();
+      if (!cleanOtra) {
+        showToast('error', 'Profesión Incompleta', 'Por favor especifique el nombre de la otra profesión.');
+        return;
+      }
+      effectiveProfesion = cleanOtra;
+      // Persist in background so it forms part of future selections
+      try {
+        fetch('/api/profesiones', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre: cleanOtra }),
+        }).catch(console.error);
+        setProfesionesList(prev => (prev.includes(cleanOtra) ? prev : [...prev, cleanOtra]));
+      } catch {}
+    }
+
     setLoading(true);
 
     const estadoObj = estados.find(e => e.id_estado === Number(idEstado));
@@ -444,7 +532,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       parroquia_nombre: parObj?.parroquia || null,
       direccion,
 
-      tipo_profesion: tipoProfesion,
+      tipo_profesion: effectiveProfesion,
       carrera_pregrado: carreraPregrado || carreraInput,
       rama_especifica: ramaEspecifica,
       universidad_pregrado: universidadPregrado,
@@ -549,9 +637,15 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
             {/* Cámara & Fotografía (Cloudflare R2) */}
             <div className="md:col-span-4 flex flex-col items-center p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-              <div className="relative w-36 h-36 rounded-2xl overflow-hidden border-2 border-dashed border-slate-300 bg-white flex items-center justify-center shadow-inner">
+              <div className="relative w-40 h-40 sm:w-44 sm:h-44 rounded-2xl overflow-hidden border-2 border-dashed border-slate-300 bg-white flex items-center justify-center shadow-inner">
                 {cameraActive ? (
-                  <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                  <>
+                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                    <div className="absolute top-2 left-2 bg-red-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-white"></span>
+                      <span>EN VIVO ({cameraFacingMode === 'user' ? 'FRONTAL' : 'TRASERA'})</span>
+                    </div>
+                  </>
                 ) : fotoUrl ? (
                   <img src={fotoUrl} alt="Foto del docente" className="w-full h-full object-cover" />
                 ) : (
@@ -572,20 +666,43 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
               {/* Botonera de Cámara / Upload */}
               <div className="w-full space-y-2">
                 {cameraActive ? (
-                  <button
-                    type="button"
-                    onClick={capturePhoto}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 rounded-lg shadow-sm flex items-center justify-center gap-1.5"
-                  >
-                    <Camera className="w-4 h-4" />
-                    <span>Tomar Foto Ahora</span>
-                  </button>
+                  <div className="space-y-1.5 w-full">
+                    <button
+                      type="button"
+                      onClick={capturePhoto}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>Tomar Foto Ahora</span>
+                    </button>
+
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={toggleCameraFacingMode}
+                        className="bg-blue-50 hover:bg-blue-100 text-[#0B4D94] border border-blue-200 font-semibold text-[10px] py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 transition-all"
+                        title="Cambiar entre cámara trasera y frontal"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>{cameraFacingMode === 'user' ? 'Cám. Trasera' : 'Cám. Frontal'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={stopCamera}
+                        className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-[10px] py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 transition-all"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Cancelar</span>
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={startCamera}
-                      className="bg-blue-50 hover:bg-blue-100 text-[#0B4D94] border border-blue-200 font-semibold text-[11px] py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 transition-all"
+                      onClick={() => startCamera('environment')}
+                      className="bg-blue-50 hover:bg-blue-100 text-[#0B4D94] border border-blue-200 font-semibold text-[11px] py-2 px-2 rounded-lg flex items-center justify-center gap-1 transition-all"
                     >
                       <Camera className="w-3.5 h-3.5" />
                       <span>Cámara Celular</span>
@@ -594,7 +711,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-semibold text-[11px] py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 transition-all"
+                      className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-semibold text-[11px] py-2 px-2 rounded-lg flex items-center justify-center gap-1 transition-all"
                     >
                       <Upload className="w-3.5 h-3.5" />
                       <span>Subir Imagen</span>
@@ -606,7 +723,6 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
                   type="file"
                   ref={fileInputRef}
                   accept="image/*"
-                  capture="user"
                   onChange={handleFileChange}
                   className="hidden"
                 />
@@ -734,59 +850,52 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Estado</label>
-              <select
+              <SearchableSelect
                 value={idEstado}
-                onChange={e => {
-                  setIdEstado(e.target.value ? Number(e.target.value) : '');
+                onChange={val => {
+                  setIdEstado(val ? Number(val) : '');
                   setIdMunicipio('');
                   setIdParroquia('');
                 }}
-                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
-              >
-                <option value="">Seleccione Estado...</option>
-                {estados.map(est => (
-                  <option key={est.id_estado} value={est.id_estado}>
-                    {est.estado}
-                  </option>
-                ))}
-              </select>
+                options={estados.map(est => ({
+                  value: est.id_estado,
+                  label: est.estado,
+                }))}
+                placeholder="Seleccione Estado..."
+              />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Municipio</label>
-              <select
-                disabled={!idEstado}
+              <SearchableSelect
                 value={idMunicipio}
-                onChange={e => {
-                  setIdMunicipio(e.target.value ? Number(e.target.value) : '');
+                disabled={!idEstado}
+                disabledMessage="Seleccione Estado primero"
+                onChange={val => {
+                  setIdMunicipio(val ? Number(val) : '');
                   setIdParroquia('');
                 }}
-                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 bg-white disabled:bg-slate-100 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
-              >
-                <option value="">Seleccione Municipio...</option>
-                {municipios.map(m => (
-                  <option key={m.id_municipio} value={m.id_municipio}>
-                    {m.municipio}
-                  </option>
-                ))}
-              </select>
+                options={municipios.map(m => ({
+                  value: m.id_municipio,
+                  label: m.municipio,
+                }))}
+                placeholder="Seleccione Municipio..."
+              />
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">Parroquia</label>
-              <select
-                disabled={!idMunicipio}
+              <SearchableSelect
                 value={idParroquia}
-                onChange={e => setIdParroquia(e.target.value ? Number(e.target.value) : '')}
-                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 bg-white disabled:bg-slate-100 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
-              >
-                <option value="">Seleccione Parroquia...</option>
-                {parroquias.map(p => (
-                  <option key={p.id_parroquia} value={p.id_parroquia}>
-                    {p.parroquia}
-                  </option>
-                ))}
-              </select>
+                disabled={!idMunicipio}
+                disabledMessage="Seleccione Municipio primero"
+                onChange={val => setIdParroquia(val ? Number(val) : '')}
+                options={parroquias.map(p => ({
+                  value: p.id_parroquia,
+                  label: p.parroquia,
+                }))}
+                placeholder="Seleccione Parroquia..."
+              />
             </div>
 
             <div className="sm:col-span-3">
@@ -818,18 +927,41 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
               </label>
               <select
                 value={tipoProfesion}
-                onChange={e => setTipoProfesion(e.target.value)}
+                onChange={e => {
+                  setTipoProfesion(e.target.value);
+                  if (e.target.value !== 'OTRO') {
+                    setOtraProfesionInput('');
+                  }
+                }}
                 className="w-full text-xs border border-slate-300 rounded-lg p-2.5 bg-white font-semibold text-[#0B4D94] focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
               >
-                <option value="INGENIERO">INGENIERO</option>
-                <option value="LICENCIADO">LICENCIADO</option>
-                <option value="MEDICO">MÉDICO</option>
-                <option value="ARQUITECTO">ARQUITECTO</option>
-                <option value="ABOGADO">ABOGADO</option>
-                <option value="TSU">TSU</option>
-                <option value="OTRO">OTRO</option>
+                {profesionesList.map(prof => (
+                  <option key={prof} value={prof}>
+                    {prof}
+                  </option>
+                ))}
+                <option value="OTRO">OTRO (Especificar otra profesión...)</option>
               </select>
             </div>
+
+            {tipoProfesion === 'OTRO' && (
+              <div className="animate-slide-in">
+                <label className="block text-xs font-bold text-amber-900 mb-1">
+                  Especifique la Profesión <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="EJ. ECONOMISTA, PSICÓLOGO, SOCIÓLOGO..."
+                  value={otraProfesionInput}
+                  onChange={e => setOtraProfesionInput(e.target.value.toUpperCase())}
+                  className="w-full text-xs border-2 border-amber-400 bg-amber-50/50 rounded-lg p-2.5 font-bold uppercase focus:ring-2 focus:ring-[#0B4D94] focus:outline-none text-slate-900"
+                />
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Se guardará en mayúsculas y formará parte de las opciones para otros docentes.
+                </p>
+              </div>
+            )}
 
             {/* CARRERA AUTOCOMPLETABLE CON CREACIÓN EN CALIENTE */}
             <div className="relative">
@@ -1188,96 +1320,126 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+            {/* Componente Docente */}
+            <div
+              onClick={() => setComponenteDocente(!componenteDocente)}
+              className={`p-3.5 rounded-xl border cursor-pointer select-none transition-all flex items-center justify-between ${
+                componenteDocente
+                  ? 'bg-blue-50/90 border-[#0B4D94] shadow-xs ring-1 ring-[#0B4D94]/30'
+                  : 'bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+              }`}
+            >
               <div>
-                <p className="font-bold text-xs text-slate-800">Componente Docente</p>
+                <p className={`font-bold text-xs ${componenteDocente ? 'text-[#0B4D94]' : 'text-slate-800'}`}>
+                  Componente Docente
+                </p>
                 <p className="text-[10px] text-slate-500">¿Posee formación pedagógica?</p>
               </div>
               <input
                 type="checkbox"
                 checked={componenteDocente}
-                onChange={e => setComponenteDocente(e.target.checked)}
-                className="w-4 h-4 rounded text-[#0B4D94] focus:ring-[#0B4D94]"
+                readOnly
+                className="w-4 h-4 rounded text-[#0B4D94] focus:ring-[#0B4D94] pointer-events-none"
               />
             </div>
 
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+            {/* Usuario en RECITVEN */}
+            <div
+              onClick={() => setUsuarioRecitven(!usuarioRecitven)}
+              className={`p-3.5 rounded-xl border cursor-pointer select-none transition-all flex items-center justify-between ${
+                usuarioRecitven
+                  ? 'bg-blue-50/90 border-[#0B4D94] shadow-xs ring-1 ring-[#0B4D94]/30'
+                  : 'bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+              }`}
+            >
               <div>
-                <p className="font-bold text-xs text-slate-800">Usuario en RECITVEN</p>
+                <p className={`font-bold text-xs ${usuarioRecitven ? 'text-[#0B4D94]' : 'text-slate-800'}`}>
+                  Usuario en RECITVEN
+                </p>
                 <p className="text-[10px] text-slate-500">Registro Científico e Innovación</p>
               </div>
               <input
                 type="checkbox"
                 checked={usuarioRecitven}
-                onChange={e => setUsuarioRecitven(e.target.checked)}
-                className="w-4 h-4 rounded text-[#0B4D94] focus:ring-[#0B4D94]"
+                readOnly
+                className="w-4 h-4 rounded text-[#0B4D94] focus:ring-[#0B4D94] pointer-events-none"
               />
             </div>
 
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+            {/* Colegiado en Gremio */}
+            <div
+              onClick={() => setColegiado(!colegiado)}
+              className={`p-3.5 rounded-xl border cursor-pointer select-none transition-all flex items-center justify-between ${
+                colegiado
+                  ? 'bg-blue-50/90 border-[#0B4D94] shadow-xs ring-1 ring-[#0B4D94]/30'
+                  : 'bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+              }`}
+            >
               <div>
-                <p className="font-bold text-xs text-slate-800">Colegiado en Gremio</p>
+                <p className={`font-bold text-xs ${colegiado ? 'text-[#0B4D94]' : 'text-slate-800'}`}>
+                  Colegiado en Gremio
+                </p>
                 <p className="text-[10px] text-slate-500">CIV, Colegio de Licenciados, etc.</p>
               </div>
               <input
                 type="checkbox"
                 checked={colegiado}
-                onChange={e => setColegiado(e.target.checked)}
-                className="w-4 h-4 rounded text-[#0B4D94] focus:ring-[#0B4D94]"
+                readOnly
+                className="w-4 h-4 rounded text-[#0B4D94] focus:ring-[#0B4D94] pointer-events-none"
               />
             </div>
 
             {colegiado && (
               <>
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-2 animate-slide-in">
                   <label className="block text-xs font-bold text-slate-700 mb-1">Nombre del Colegio Profesional</label>
                   <input
                     type="text"
                     placeholder="Ej. Colegio de Ingenieros de Venezuela (CIV)"
                     value={nombreColegio}
                     onChange={e => setNombreColegio(e.target.value)}
-                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
                   />
                 </div>
-                <div>
+                <div className="animate-slide-in">
                   <label className="block text-xs font-bold text-slate-700 mb-1">Número de Colegiatura / Carnet</label>
                   <input
                     type="text"
                     placeholder="Ej. CIV-123456"
                     value={numeroColegio}
                     onChange={e => setNumeroColegio(e.target.value)}
-                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5"
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
                   />
                 </div>
               </>
             )}
 
             {/* SELECCIÓN DE PROGRAMAS (PNF) SOLICITADOS */}
-            <div className="sm:col-span-3 border border-slate-200 rounded-xl p-4 bg-white">
-              <label className="block text-xs font-bold text-slate-800 mb-2">
+            <div className="sm:col-span-3 border border-slate-200 rounded-xl p-4 bg-white space-y-2">
+              <label className="block text-xs font-bold text-slate-800">
                 Programas de Formación en los que participa en UPTPC:
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
                 {pnfList.map(pnf => {
                   const isChecked = selectedPnfs.includes(pnf.nombre);
                   return (
-                    <label
+                    <div
                       key={pnf.id}
                       onClick={() => handleTogglePnf(pnf.nombre)}
-                      className={`flex items-center gap-2 p-2.5 rounded-lg border text-xs font-medium cursor-pointer transition-all ${
+                      className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs font-medium cursor-pointer select-none transition-all ${
                         isChecked
-                          ? 'bg-blue-50 border-[#0B4D94] text-[#0B4D94] font-semibold'
-                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                          ? 'bg-blue-50/90 border-[#0B4D94] text-[#0B4D94] font-bold shadow-xs ring-1 ring-[#0B4D94]/30'
+                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
                       }`}
                     >
                       <input
                         type="checkbox"
                         checked={isChecked}
-                        onChange={() => {}} // handled on parent label
-                        className="rounded text-[#0B4D94] focus:ring-[#0B4D94]"
+                        readOnly
+                        className="rounded text-[#0B4D94] focus:ring-[#0B4D94] pointer-events-none"
                       />
-                      <span>{pnf.nombre}</span>
-                    </label>
+                      <span className="leading-tight">{pnf.nombre}</span>
+                    </div>
                   );
                 })}
               </div>
