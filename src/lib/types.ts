@@ -20,6 +20,14 @@ export interface AdminPermisos {
   usuarios: boolean;
 }
 
+export interface EncuestadorPermisos {
+  observatorio: boolean;
+  docentes: boolean;
+  encuesta: boolean;
+  reportes: boolean;
+  carga_masiva: boolean;
+}
+
 export interface PNF {
   id: number;
   codigo: string;

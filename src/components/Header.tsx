@@ -15,12 +15,13 @@ import {
   X,
   Search,
 } from 'lucide-react';
-import { Usuario, AdminPermisos } from '@/lib/types';
+import { Usuario, AdminPermisos, EncuestadorPermisos } from '@/lib/types';
 
 interface HeaderProps {
   currentHash: string;
   currentUser: Usuario | null;
   adminPermisos: AdminPermisos | null;
+  encuestadorPermisos?: EncuestadorPermisos | null;
   onOpenLogin: () => void;
   onLogout: () => void;
   onQuickSearch: (query: string) => void;
@@ -30,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   currentHash,
   currentUser,
   adminPermisos,
+  encuestadorPermisos,
   onOpenLogin,
   onLogout,
   onQuickSearch,
@@ -51,9 +53,15 @@ export const Header: React.FC<HeaderProps> = ({
   const isEncuestador = currentUser?.rol === 'ENCUESTADOR';
   const isLoggedIn = !!currentUser;
 
-  const canAccessEncuesta = isSuperAdmin || isEncuestador || (isAdmin && adminPermisos?.encuesta !== false);
-  const canAccessCargaMasiva = isSuperAdmin || (isAdmin && adminPermisos?.carga_masiva !== false);
-  const canAccessReportes = isSuperAdmin || (isAdmin && adminPermisos?.reportes !== false);
+  const canAccessEncuesta = isSuperAdmin
+    || (isAdmin && adminPermisos?.encuesta !== false)
+    || (isEncuestador && encuestadorPermisos?.encuesta !== false);
+  const canAccessCargaMasiva = isSuperAdmin
+    || (isAdmin && adminPermisos?.carga_masiva !== false)
+    || (isEncuestador && encuestadorPermisos?.carga_masiva === true);
+  const canAccessReportes = isSuperAdmin
+    || (isAdmin && adminPermisos?.reportes !== false)
+    || (isEncuestador && encuestadorPermisos?.reportes === true);
   const canAccessDashboard = isSuperAdmin || isAdmin;
   const canAccessUsuarios = isSuperAdmin || (isAdmin && adminPermisos?.usuarios === true);
   const canAccessConfig = isSuperAdmin || (isAdmin && adminPermisos?.configuracion === true);

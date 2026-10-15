@@ -10,8 +10,11 @@ import {
   Database,
   Cloud,
   Layers,
+  ClipboardEdit,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
-import { AdminPermisos, Usuario } from '@/lib/types';
+import { AdminPermisos, EncuestadorPermisos, Usuario } from '@/lib/types';
 import { useToast } from './Toast';
 
 interface ConfiguracionManagerProps {
@@ -29,6 +32,9 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [changingPass, setChangingPass] = useState(false);
 
   // Admin Permissions Matrix State
@@ -43,13 +49,28 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
   });
   const [savingPermisos, setSavingPermisos] = useState(false);
 
+  // Encuestador Permissions Matrix State
+  const [encuestadorPermisos, setEncuestadorPermisos] = useState<EncuestadorPermisos>({
+    observatorio: true,
+    docentes: true,
+    encuesta: true,
+    reportes: false,
+    carga_masiva: false,
+  });
+  const [savingEncuestadorPermisos, setSavingEncuestadorPermisos] = useState(false);
+
   // Load config on mount
   useEffect(() => {
     fetch('/api/configuracion')
       .then(r => r.json())
       .then(data => {
-        if (data.success && data.config?.admin_permisos) {
-          setPermisos(data.config.admin_permisos);
+        if (data.success) {
+          if (data.config?.admin_permisos) {
+            setPermisos(data.config.admin_permisos);
+          }
+          if (data.config?.encuestador_permisos) {
+            setEncuestadorPermisos(data.config.encuestador_permisos);
+          }
         }
       })
       .catch(console.error);
@@ -115,7 +136,7 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
 
       const json = await res.json();
       if (json.success) {
-        showToast('success', 'Permisos Actualizados', 'La matriz de accesos para el rol ADMIN fue guardada.');
+        showToast('success', 'Permisos de ADMIN Actualizados', 'La matriz de accesos para el rol ADMIN fue guardada.');
         onPermissionsUpdated();
       } else {
         showToast('error', 'Error al guardar', json.error);
@@ -124,6 +145,36 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
       showToast('error', 'Error de red', err.message);
     } finally {
       setSavingPermisos(false);
+    }
+  };
+
+  const handleSaveEncuestadorPermisos = async () => {
+    setSavingEncuestadorPermisos(true);
+    try {
+      const res = await fetch('/api/configuracion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clave: 'encuestador_permisos',
+          valor: encuestadorPermisos,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        showToast(
+          'success',
+          'Permisos de ENCUESTADOR Actualizados',
+          'La matriz de accesos para el rol ENCUESTADOR fue guardada.'
+        );
+        onPermissionsUpdated();
+      } else {
+        showToast('error', 'Error al guardar', json.error);
+      }
+    } catch (err: any) {
+      showToast('error', 'Error de red', err.message);
+    } finally {
+      setSavingEncuestadorPermisos(false);
     }
   };
 
@@ -161,38 +212,71 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
           <form onSubmit={handleChangePassword} className="space-y-3 text-xs">
             <div>
               <label className="block font-bold text-slate-700 mb-1">Contraseña Actual</label>
-              <input
-                type="password"
-                required
-                placeholder="••••••••"
-                value={currentPassword}
-                onChange={e => setCurrentPassword(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none bg-white"
-              />
+              <div className="relative">
+                <input
+                  type={showCurrentPass ? 'text' : 'password'}
+                  required
+                  placeholder="••••••••"
+                  value={currentPassword}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg pl-3 pr-10 py-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPass(!showCurrentPass)}
+                  tabIndex={-1}
+                  className="absolute right-3 top-2.5 p-0.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  title={showCurrentPass ? 'Ocultar contraseña' : 'Ver contraseña'}
+                >
+                  {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">Nueva Contraseña</label>
-              <input
-                type="password"
-                required
-                placeholder="Mínimo 6 caracteres"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none bg-white"
-              />
+              <div className="relative">
+                <input
+                  type={showNewPass ? 'text' : 'password'}
+                  required
+                  placeholder="Mínimo 6 caracteres"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg pl-3 pr-10 py-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPass(!showNewPass)}
+                  tabIndex={-1}
+                  className="absolute right-3 top-2.5 p-0.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  title={showNewPass ? 'Ocultar contraseña' : 'Ver contraseña'}
+                >
+                  {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">Confirmar Nueva Contraseña</label>
-              <input
-                type="password"
-                required
-                placeholder="Repita la nueva contraseña"
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none bg-white"
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPass ? 'text' : 'password'}
+                  required
+                  placeholder="Repita la nueva contraseña"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg pl-3 pr-10 py-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPass(!showConfirmPass)}
+                  tabIndex={-1}
+                  className="absolute right-3 top-2.5 p-0.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                  title={showConfirmPass ? 'Ocultar contraseña' : 'Ver contraseña'}
+                >
+                  {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <button
@@ -325,10 +409,127 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4" />
-                    <span>Guardar Configuración de Permisos</span>
+                    <span>Guardar Permisos de ADMIN</span>
                   </>
                 )}
               </button>
+            </div>
+          )}
+        </div>
+
+        {/* Panel 3: Matriz de Permisos para ENCUESTADOR */}
+        <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 md:col-span-2">
+          <div className="flex items-center gap-2.5 text-slate-800 pb-2 border-b border-slate-200">
+            <ClipboardEdit className="w-5 h-5 text-emerald-600" />
+            <div>
+              <h3 className="font-bold text-sm">Privilegios y Accesos para el Rol ENCUESTADOR</h3>
+              <p className="text-[11px] text-slate-500">
+                Defina qué secciones estarán habilitadas para los usuarios con perfil de Encuestador
+              </p>
+            </div>
+          </div>
+
+          {!isSuperAdmin ? (
+            <div className="p-4 bg-amber-50 text-amber-900 border border-amber-200 rounded-xl text-xs">
+              Solo el <strong>SUPERADMIN</strong> puede modificar la matriz de privilegios de los encuestadores.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+              <label className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 transition-all">
+                <div>
+                  <p className="font-bold text-slate-800">Censo PEI (Recopilación)</p>
+                  <p className="text-[10px] text-slate-400">Captura de fichas docentes y fotos</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={encuestadorPermisos.encuesta}
+                  onChange={e =>
+                    setEncuestadorPermisos({ ...encuestadorPermisos, encuesta: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 transition-all">
+                <div>
+                  <p className="font-bold text-slate-800">Directorio de Docentes</p>
+                  <p className="text-[10px] text-slate-400">Consultar y ver fichas censadas</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={encuestadorPermisos.docentes}
+                  onChange={e =>
+                    setEncuestadorPermisos({ ...encuestadorPermisos, docentes: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 transition-all">
+                <div>
+                  <p className="font-bold text-slate-800">Observatorio e Indicadores</p>
+                  <p className="text-[10px] text-slate-400">Ver métricas globales institucionales</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={encuestadorPermisos.observatorio}
+                  onChange={e =>
+                    setEncuestadorPermisos({ ...encuestadorPermisos, observatorio: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 transition-all">
+                <div>
+                  <p className="font-bold text-slate-800">Generador de Reportes y PDF</p>
+                  <p className="text-[10px] text-slate-400">Permitir exportar informes ejecutivos</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={encuestadorPermisos.reportes}
+                  onChange={e =>
+                    setEncuestadorPermisos({ ...encuestadorPermisos, reportes: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                />
+              </label>
+
+              <label className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 transition-all">
+                <div>
+                  <p className="font-bold text-slate-800">Carga Masiva CSV</p>
+                  <p className="text-[10px] text-slate-400">Importación de lotes en formato CSV</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={encuestadorPermisos.carga_masiva}
+                  onChange={e =>
+                    setEncuestadorPermisos({ ...encuestadorPermisos, carga_masiva: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                />
+              </label>
+
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={handleSaveEncuestadorPermisos}
+                  disabled={savingEncuestadorPermisos}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  {savingEncuestadorPermisos ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Guardar Permisos de ENCUESTADOR</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
         </div>

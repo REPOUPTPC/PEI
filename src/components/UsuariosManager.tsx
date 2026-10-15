@@ -12,6 +12,8 @@ import {
   RefreshCw,
   Search,
   Lock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Usuario, RolUsuario } from '@/lib/types';
 import { useToast } from './Toast';
@@ -26,6 +28,7 @@ export const UsuariosManager: React.FC = () => {
   // Form state
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [rol, setRol] = useState<RolUsuario>('ENCUESTADOR');
   const [activo, setActivo] = useState(true);
@@ -57,6 +60,7 @@ export const UsuariosManager: React.FC = () => {
     setEditingUser(null);
     setUsername('');
     setPassword('');
+    setShowPassword(false);
     setNombreCompleto('');
     setRol('ENCUESTADOR');
     setActivo(true);
@@ -67,6 +71,7 @@ export const UsuariosManager: React.FC = () => {
     setEditingUser(user);
     setUsername(user.username);
     setPassword(''); // leave blank if keeping same password
+    setShowPassword(false);
     setNombreCompleto(user.nombre_completo);
     setRol(user.rol);
     setActivo(user.activo === 1);
@@ -312,13 +317,24 @@ export const UsuariosManager: React.FC = () => {
                 <label className="block font-bold text-slate-700 mb-1">
                   Contraseña {editingUser && '(Dejar en blanco para mantener la actual)'}
                 </label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg pl-3 pr-10 py-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                    className="absolute right-3 top-2.5 p-0.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                    title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div>

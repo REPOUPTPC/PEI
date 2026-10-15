@@ -13,7 +13,7 @@ import { ConfiguracionManager } from '@/components/ConfiguracionManager';
 import { DocenteFichaModal } from '@/components/DocenteFichaModal';
 import { LoginModal } from '@/components/LoginModal';
 import { useToast } from '@/components/Toast';
-import { Docente, ObservatorioStats, Usuario, AdminPermisos } from '@/lib/types';
+import { Docente, ObservatorioStats, Usuario, AdminPermisos, EncuestadorPermisos } from '@/lib/types';
 
 export default function Home() {
   const { showToast } = useToast();
@@ -24,6 +24,7 @@ export default function Home() {
   // Auth & Session state
   const [currentUser, setCurrentUser] = useState<Usuario | null>(null);
   const [adminPermisos, setAdminPermisos] = useState<AdminPermisos | null>(null);
+  const [encuestadorPermisos, setEncuestadorPermisos] = useState<EncuestadorPermisos | null>(null);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
   // Data states
@@ -69,6 +70,11 @@ export default function Home() {
       if (storedPermisos) {
         setAdminPermisos(JSON.parse(storedPermisos));
       }
+
+      const storedEncPermisos = localStorage.getItem('pei_encuestador_permisos');
+      if (storedEncPermisos) {
+        setEncuestadorPermisos(JSON.parse(storedEncPermisos));
+      }
     } catch (e) {
       console.error('Error reading localStorage session:', e);
     }
@@ -109,9 +115,15 @@ export default function Home() {
     try {
       const rCfg = await fetch('/api/configuracion');
       const dCfg = await rCfg.json();
-      if (dCfg.success && dCfg.config?.admin_permisos) {
-        setAdminPermisos(dCfg.config.admin_permisos);
-        localStorage.setItem('pei_permisos', JSON.stringify(dCfg.config.admin_permisos));
+      if (dCfg.success) {
+        if (dCfg.config?.admin_permisos) {
+          setAdminPermisos(dCfg.config.admin_permisos);
+          localStorage.setItem('pei_permisos', JSON.stringify(dCfg.config.admin_permisos));
+        }
+        if (dCfg.config?.encuestador_permisos) {
+          setEncuestadorPermisos(dCfg.config.encuestador_permisos);
+          localStorage.setItem('pei_encuestador_permisos', JSON.stringify(dCfg.config.encuestador_permisos));
+        }
       }
     } catch (err: any) {
       console.error('Error fetching /api/configuracion:', err);
@@ -141,8 +153,10 @@ export default function Home() {
   const handleLogout = () => {
     setCurrentUser(null);
     setAdminPermisos(null);
+    setEncuestadorPermisos(null);
     localStorage.removeItem('pei_user');
     localStorage.removeItem('pei_permisos');
+    localStorage.removeItem('pei_encuestador_permisos');
     showToast('info', 'Sesión Cerrada', 'Ha salido del sistema correctamente.');
     window.location.hash = '#observatorio';
   };
@@ -237,21 +251,31 @@ export default function Home() {
           />
         );
 
-      case '#carga-masiva':
-        if (!isSuperAdmin && (!isAdmin || adminPermisos?.carga_masiva === false)) {
+      case '#carga-masiva': {
+        const canCargaMasiva =
+          isSuperAdmin ||
+          (isAdmin && adminPermisos?.carga_masiva !== false) ||
+          (isEncuestador && encuestadorPermisos?.carga_masiva === true);
+        if (!canCargaMasiva) {
           return (
             <div className="card-white p-8 max-w-md mx-auto text-center space-y-3">
               <h3 className="font-bold text-base text-rose-600">Acceso Restringido</h3>
               <p className="text-xs text-slate-600">
-                La carga masiva requiere privilegios de Administrador o Superadmin autorizados.
+                La carga masiva requiere privilegios autorizados en el sistema.
               </p>
             </div>
           );
         }
         return <CargaMasivaCSV onSuccess={loadData} currentUser={currentUser} />;
+      }
 
-      case '#reportes':
-        if (currentUser && !isSuperAdmin && (!isAdmin || adminPermisos?.reportes === false)) {
+      case '#reportes': {
+        const canReportes =
+          !currentUser ||
+          isSuperAdmin ||
+          (isAdmin && adminPermisos?.reportes !== false) ||
+          (isEncuestador && encuestadorPermisos?.reportes !== false);
+        if (!canReportes) {
           return (
             <div className="card-white p-8 max-w-md mx-auto text-center space-y-3">
               <h3 className="font-bold text-base text-rose-600">Acceso Restringido</h3>
@@ -268,6 +292,7 @@ export default function Home() {
             onSelectDocente={handleSelectDocente}
           />
         );
+      }
 
       case '#dashboard':
         if (!currentUser) {
@@ -352,6 +377,7 @@ export default function Home() {
         currentHash={currentHash}
         currentUser={currentUser}
         adminPermisos={adminPermisos}
+        encuestadorPermisos={encuestadorPermisos}
         onOpenLogin={() => setLoginModalOpen(true)}
         onLogout={handleLogout}
         onQuickSearch={handleQuickSearch}
