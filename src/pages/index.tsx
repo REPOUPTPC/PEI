@@ -30,6 +30,7 @@ export default function Home() {
   const [stats, setStats] = useState<ObservatorioStats | null>(null);
   const [docentes, setDocentes] = useState<Docente[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Active Modals & Selected Objects
   const [selectedDocenteForFicha, setSelectedDocenteForFicha] = useState<Docente | null>(null);
@@ -73,29 +74,47 @@ export default function Home() {
     }
   }, []);
 
-  // 3. Load Stats and Docentes
+  // 3. Load Stats and Docentes with resilient individual fetches
   const loadData = useCallback(async () => {
+    setLoadingData(true);
+    setLoadError(null);
+
+    // Fetch stats
     try {
-      const [resStats, resDocentes, resCfg] = await Promise.all([
-        fetch('/api/stats').then(r => r.json()),
-        fetch('/api/docentes?limit=500').then(r => r.json()),
-        fetch('/api/configuracion').then(r => r.json()),
-      ]);
-
-      if (resStats.success && resStats.stats) {
-        setStats(resStats.stats);
+      const rStats = await fetch('/api/stats');
+      const dStats = await rStats.json();
+      if (dStats.success && dStats.stats) {
+        setStats(dStats.stats);
+      } else if (dStats.error) {
+        console.warn('API Stats issue:', dStats.error);
+        setLoadError(dStats.error);
       }
+    } catch (err: any) {
+      console.error('Error fetching /api/stats:', err);
+      setLoadError(err.message || 'Error de conexión con /api/stats');
+    }
 
-      if (resDocentes.success && resDocentes.docentes) {
-        setDocentes(resDocentes.docentes);
+    // Fetch docentes
+    try {
+      const rDoc = await fetch('/api/docentes?limit=500');
+      const dDoc = await rDoc.json();
+      if (dDoc.success && dDoc.docentes) {
+        setDocentes(dDoc.docentes);
       }
+    } catch (err: any) {
+      console.error('Error fetching /api/docentes:', err);
+    }
 
-      if (resCfg.success && resCfg.config?.admin_permisos) {
-        setAdminPermisos(resCfg.config.admin_permisos);
-        localStorage.setItem('pei_permisos', JSON.stringify(resCfg.config.admin_permisos));
+    // Fetch config
+    try {
+      const rCfg = await fetch('/api/configuracion');
+      const dCfg = await rCfg.json();
+      if (dCfg.success && dCfg.config?.admin_permisos) {
+        setAdminPermisos(dCfg.config.admin_permisos);
+        localStorage.setItem('pei_permisos', JSON.stringify(dCfg.config.admin_permisos));
       }
-    } catch (err) {
-      console.error('Error loading data:', err);
+    } catch (err: any) {
+      console.error('Error fetching /api/configuracion:', err);
     } finally {
       setLoadingData(false);
     }
@@ -172,6 +191,9 @@ export default function Home() {
             docentes={docentes}
             onSelectDocente={handleSelectDocente}
             onNavigateToEncuesta={() => (window.location.hash = '#encuesta')}
+            loading={loadingData}
+            error={loadError}
+            onRetry={loadData}
           />
         );
 
@@ -311,6 +333,9 @@ export default function Home() {
             docentes={docentes}
             onSelectDocente={handleSelectDocente}
             onNavigateToEncuesta={() => (window.location.hash = '#encuesta')}
+            loading={loadingData}
+            error={loadError}
+            onRetry={loadData}
           />
         );
     }
@@ -362,4 +387,3 @@ export default function Home() {
     </div>
   );
 }
-

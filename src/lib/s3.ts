@@ -1,10 +1,21 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
-const endpoint = process.env.R2_ENDPOINT || 'https://da7c23add0ce839e4989c068fbfa4394.r2.cloudflarestorage.com';
-const accessKeyId = process.env.R2_ACCESS_KEY_ID || '';
-const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY || '';
+const endpoint =
+  process.env.R2_ENDPOINT ||
+  'https://da7c23add0ce839e4989c068fbfa4394.r2.cloudflarestorage.com';
+
+const accessKeyId =
+  process.env.R2_ACCESS_KEY_ID ||
+  'ebd05f33ae6eb4e8fbb1eaad50b7bb09';
+
+const secretAccessKey =
+  process.env.R2_SECRET_ACCESS_KEY ||
+  'a4936f4285fe070ec4d290dd45e6105d81c192b90d767266532880bd1a49e12a';
+
 const bucket = process.env.R2_BUCKET || 'rectorado';
-export const publicBaseUrl = process.env.R2_PUBLIC_URL || 'https://pub-e4f5b0a4105248f090453c5e81b8348f.r2.dev';
+export const publicBaseUrl =
+  process.env.R2_PUBLIC_URL ||
+  'https://pub-e4f5b0a4105248f090453c5e81b8348f.r2.dev';
 
 export const s3 = new S3Client({
   region: 'auto',
@@ -35,4 +46,3 @@ export async function uploadToR2(
 
   return `${publicBaseUrl}/${key}`;
 }
-
