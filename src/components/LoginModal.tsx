@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogIn, X, Lock, User, RefreshCw, Key, ShieldCheck } from 'lucide-react';
+import { LogIn, X, Lock, User, RefreshCw, Key, Eye, EyeOff } from 'lucide-react';
 import { Usuario } from '@/lib/types';
 import { useToast } from './Toast';
 
@@ -13,6 +13,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
   const { showToast } = useToast();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -51,11 +52,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     }
   };
 
-  const handleQuickSuperadmin = () => {
-    setUsername('CIENCIA_TECNOLOGIA');
-    setPassword('CYT_01012023');
-  };
-
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-5 border border-slate-200 animate-slide-in relative">
@@ -84,7 +80,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               <input
                 type="text"
                 required
-                placeholder="Ej. CIENCIA_TECNOLOGIA"
+                placeholder="Ej. USUARIO"
                 value={username}
                 onChange={e => setUsername(e.target.value.toUpperCase())}
                 className="w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2.5 font-mono uppercase focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
@@ -97,14 +93,23 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
             <label className="block font-bold text-slate-700 mb-1">Contraseña</label>
             <div className="relative">
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full border border-slate-300 rounded-xl pl-9 pr-3 py-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                className="w-full border border-slate-300 rounded-xl pl-9 pr-10 py-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
               />
               <Key className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
+                className="absolute right-3 top-2.5 p-0.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -126,17 +131,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
             )}
           </button>
         </form>
-
-        {/* Botón rápido para SuperAdmin inicial */}
-        <div className="pt-2 border-t border-slate-100 text-center">
-          <button
-            type="button"
-            onClick={handleQuickSuperadmin}
-            className="text-[11px] font-semibold text-[#0B4D94] hover:underline"
-          >
-            Rellenar credenciales oficiales de SUPERADMIN
-          </button>
-        </div>
       </div>
     </div>
   );
