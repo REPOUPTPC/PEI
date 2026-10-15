@@ -336,3 +336,4 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
     </div>
   );
 };
+

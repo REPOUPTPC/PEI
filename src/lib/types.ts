@@ -166,3 +166,4 @@ export interface ObservatorioStats {
   lineasInvestigacionTop: { linea: string; total: number }[];
   distribucionGeografica?: { estado: string; municipio: string; total: number }[];
 }
+

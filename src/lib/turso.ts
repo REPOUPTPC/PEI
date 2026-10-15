@@ -9,3 +9,4 @@ export const db = createClient({
 });
 
 export default db;
+

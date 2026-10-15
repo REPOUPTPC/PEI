@@ -725,3 +725,4 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
     </div>
   );
 };
+

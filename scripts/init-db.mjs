@@ -407,3 +407,4 @@ initDatabase().catch(err => {
   console.error('❌ Error inicializando DB:', err);
   process.exit(1);
 });
+
