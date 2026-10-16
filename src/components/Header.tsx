@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   Search,
+  Home as HomeIcon,
 } from 'lucide-react';
 import { Usuario, AdminPermisos, EncuestadorPermisos } from '@/lib/types';
 
@@ -22,6 +23,7 @@ interface HeaderProps {
   currentUser: Usuario | null;
   adminPermisos: AdminPermisos | null;
   encuestadorPermisos?: EncuestadorPermisos | null;
+  observatorioPublico?: boolean;
   onOpenLogin: () => void;
   onLogout: () => void;
   onQuickSearch: (query: string) => void;
@@ -32,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
   adminPermisos,
   encuestadorPermisos,
+  observatorioPublico = false,
   onOpenLogin,
   onLogout,
   onQuickSearch,
@@ -41,6 +44,10 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) {
+      onOpenLogin();
+      return;
+    }
     if (searchVal.trim()) {
       window.location.hash = '#docentes';
       onQuickSearch(searchVal.trim());
@@ -53,6 +60,7 @@ export const Header: React.FC<HeaderProps> = ({
   const isEncuestador = currentUser?.rol === 'ENCUESTADOR';
   const isLoggedIn = !!currentUser;
 
+  const canAccessObservatorio = isLoggedIn || observatorioPublico;
   const canAccessEncuesta = isSuperAdmin
     || (isAdmin && adminPermisos?.encuesta !== false)
     || (isEncuestador && encuestadorPermisos?.encuesta !== false);
@@ -68,59 +76,66 @@ export const Header: React.FC<HeaderProps> = ({
 
   const navItems = [
     {
+      hash: '#inicio',
+      label: 'Inicio',
+      icon: HomeIcon,
+      visible: true,
+      desc: 'Contexto Institucional PEI RECTORADO',
+    },
+    {
       hash: '#observatorio',
       label: 'Observatorio',
       icon: BarChart3,
-      visible: true,
+      visible: canAccessObservatorio,
       desc: 'Métricas e Indicadores Institucionales',
     },
     {
       hash: '#docentes',
       label: 'Docentes',
       icon: Users,
-      visible: true,
+      visible: isLoggedIn,
       desc: 'Directorio y Fichas Profesionales',
     },
     {
       hash: '#encuesta',
       label: 'Censo PEI',
       icon: ClipboardEdit,
-      visible: canAccessEncuesta,
+      visible: isLoggedIn && canAccessEncuesta,
       desc: 'Formulario de Recopilación Integral',
     },
     {
       hash: '#carga-masiva',
       label: 'Carga Masiva',
       icon: FileSpreadsheet,
-      visible: canAccessCargaMasiva,
+      visible: isLoggedIn && canAccessCargaMasiva,
       desc: 'Importación Precargada CSV',
     },
     {
       hash: '#reportes',
       label: 'Reportes',
       icon: FileText,
-      visible: canAccessReportes,
+      visible: isLoggedIn && canAccessReportes,
       desc: 'Estadísticas y Exportación PDF',
     },
     {
       hash: '#dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      visible: canAccessDashboard,
+      visible: isLoggedIn && canAccessDashboard,
       desc: 'Panel de Control Administrativo',
     },
     {
       hash: '#usuarios',
       label: 'Usuarios',
       icon: ShieldAlert,
-      visible: canAccessUsuarios,
+      visible: isLoggedIn && canAccessUsuarios,
       desc: 'Gestión de Perfiles y Accesos',
     },
     {
       hash: '#configuracion',
       label: 'Configuración',
       icon: Settings,
-      visible: canAccessConfig,
+      visible: isLoggedIn && canAccessConfig,
       desc: 'Permisos de Roles y Seguridad',
     },
   ];
@@ -231,7 +246,7 @@ export const Header: React.FC<HeaderProps> = ({
             .filter(item => item.visible)
             .map(item => {
               const Icon = item.icon;
-              const isActive = currentHash === item.hash || (item.hash === '#observatorio' && currentHash === '');
+              const isActive = currentHash === item.hash || (item.hash === '#inicio' && (currentHash === '' || currentHash === '#inicio'));
 
               return (
                 <a
@@ -257,7 +272,7 @@ export const Header: React.FC<HeaderProps> = ({
               .filter(item => item.visible)
               .map(item => {
                 const Icon = item.icon;
-                const isActive = currentHash === item.hash || (item.hash === '#observatorio' && currentHash === '');
+                const isActive = currentHash === item.hash || (item.hash === '#inicio' && (currentHash === '' || currentHash === '#inicio'));
 
                 return (
                   <a

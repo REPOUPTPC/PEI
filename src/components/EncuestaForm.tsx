@@ -18,6 +18,10 @@ import {
   Atom,
   RotateCcw,
   X,
+  Presentation,
+  CheckSquare,
+  Square,
+  Microscope,
 } from 'lucide-react';
 import {
   Docente,
@@ -27,9 +31,14 @@ import {
   Carrera,
   PNF,
   ItemAcademico,
+  ItemTitulo,
   ItemLibro,
   ItemArticulo,
   ItemDiplomado,
+  ItemEvento,
+  ItemDesarrolloAcademico,
+  ItemTutoriaProyecto,
+  AreaInteresInvestigativo,
 } from '@/lib/types';
 import { useToast } from './Toast';
 import { SearchableSelect } from './SearchableSelect';
@@ -72,14 +81,8 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
     'ABOGADO',
     'TSU',
   ]);
-  const [otraProfesionInput, setOtraProfesionInput] = useState('');
 
-  // Carrera autocomplete state
-  const [carreraInput, setCarreraInput] = useState('');
-  const [carreraDropdownOpen, setCarreraDropdownOpen] = useState(false);
-  const [creatingCarrera, setCreatingCarrera] = useState(false);
-
-  // Form State
+  // Form State: Identificación & Ubicación
   const [cedula, setCedula] = useState('');
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [cargo, setCargo] = useState('DOCENTE');
@@ -90,20 +93,24 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
   const [telefono, setTelefono] = useState('');
   const [fotoUrl, setFotoUrl] = useState('');
 
-  // Ubicación
   const [idEstado, setIdEstado] = useState<number | ''>('');
   const [idMunicipio, setIdMunicipio] = useState<number | ''>('');
   const [idParroquia, setIdParroquia] = useState<number | ''>('');
   const [direccion, setDireccion] = useState('');
 
-  // Título Universitario Pregrado
-  const [tipoProfesion, setTipoProfesion] = useState('INGENIERO');
-  const [carreraPregrado, setCarreraPregrado] = useState('');
-  const [ramaEspecifica, setRamaEspecifica] = useState('');
-  const [universidadPregrado, setUniversidadPregrado] = useState('');
-  const [anioPregrado, setAnioPregrado] = useState<string | number>('');
+  // 1. Formación Académica (Múltiples Títulos Dinámicos)
+  const [titulos, setTitulos] = useState<ItemTitulo[]>([
+    {
+      tipo_profesion: 'INGENIERO',
+      carrera: '',
+      rama_especifica: '',
+      universidad: '',
+      anio: '',
+    },
+  ]);
+  const [activeCarreraDropdownIndex, setActiveCarreraDropdownIndex] = useState<number | null>(null);
 
-  // Postgrados Dinámicos (Repeaters)
+  // 2. Postgrados Dinámicos (Repeaters)
   const [poseeEspecialidad, setPoseeEspecialidad] = useState(false);
   const [especialidades, setEspecialidades] = useState<ItemAcademico[]>([]);
 
@@ -113,7 +120,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
   const [poseeDoctorado, setPoseeDoctorado] = useState(false);
   const [doctorados, setDoctorados] = useState<ItemAcademico[]>([]);
 
-  // Docencia & Gremio
+  // 3. Docencia & Gremio
   const [componenteDocente, setComponenteDocente] = useState(false);
   const [usuarioRecitven, setUsuarioRecitven] = useState(false);
   const [colegiado, setColegiado] = useState(false);
@@ -121,21 +128,39 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
   const [numeroColegio, setNumeroColegio] = useState('');
   const [selectedPnfs, setSelectedPnfs] = useState<string[]>([]);
 
-  // Investigación
-  const [lineaInvestigacion, setLineaInvestigacion] = useState('');
+  // 4. Investigación y Áreas de Interés Investigativo (Catálogo SQL + Selección Múltiple + Creación)
+  const [catalogoAreas, setCatalogoAreas] = useState<AreaInteresInvestigativo[]>([]);
+  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
+  const [searchAreaText, setSearchAreaText] = useState('');
+  const [nuevaAreaInput, setNuevaAreaInput] = useState('');
+  const [creandoNuevaArea, setCreandoNuevaArea] = useState(false);
+
   const [investigacionEnDesarrollo, setInvestigacionEnDesarrollo] = useState(false);
   const [investigacionInstituto, setInvestigacionInstituto] = useState('');
   const [investigacionTitulo, setInvestigacionTitulo] = useState('');
   const [investigacionLinea, setInvestigacionLinea] = useState('');
 
-  // Publicaciones
+  // 5. Publicaciones
   const [publicacionesLibros, setPublicacionesLibros] = useState(false);
   const [libros, setLibros] = useState<ItemLibro[]>([]);
 
   const [publicacionesArticulos, setPublicacionesArticulos] = useState(false);
   const [articulos, setArticulos] = useState<ItemArticulo[]>([]);
 
-  // Diplomados & Potencialidades
+  // 6. Congresos, Seminarios (Nacionales e Internacionales)
+  const [participadoPonente, setParticipadoPonente] = useState(false);
+  const [participadoParticipante, setParticipadoParticipante] = useState(false);
+  const [eventos, setEventos] = useState<ItemEvento[]>([]);
+
+  // 7. Desarrollo Académico Actual
+  const [desarrolloAcademicoActual, setDesarrolloAcademicoActual] = useState(false);
+  const [desarrollosAcademicos, setDesarrollosAcademicos] = useState<ItemDesarrolloAcademico[]>([]);
+
+  // 8. Tutoría de Proyectos
+  const [tutoriaProyectosActiva, setTutoriaProyectosActiva] = useState(false);
+  const [tutoriasProyectos, setTutoriasProyectos] = useState<ItemTutoriaProyecto[]>([]);
+
+  // 9. Diplomados & Potencialidades
   const [poseeDiplomados, setPoseeDiplomados] = useState(false);
   const [diplomados, setDiplomados] = useState<ItemDiplomado[]>([]);
   const [potencialidades, setPotencialidades] = useState('');
@@ -163,6 +188,15 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       .then(d => {
         if (d.success && Array.isArray(d.profesiones)) {
           setProfesionesList(d.profesiones);
+        }
+      })
+      .catch(console.error);
+
+    fetch('/api/areas-investigacion')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && Array.isArray(d.areas)) {
+          setCatalogoAreas(d.areas);
         }
       })
       .catch(console.error);
@@ -211,18 +245,31 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       setIdParroquia(initialDocente.id_parroquia || '');
       setDireccion(initialDocente.direccion || '');
 
-      if (initialDocente.tipo_profesion) {
-        const tp = initialDocente.tipo_profesion.trim().toUpperCase();
-        setProfesionesList(prev => (prev.includes(tp) ? prev : [...prev, tp]));
-        setTipoProfesion(tp);
+      // 1. Formación Académica (Múltiples Títulos)
+      const loadedTitulos = parseJsonSafe(initialDocente.titulos_adicionales);
+      if (loadedTitulos.length > 0) {
+        setTitulos(loadedTitulos);
+      } else if (initialDocente.carrera_pregrado) {
+        setTitulos([
+          {
+            tipo_profesion: initialDocente.tipo_profesion || 'INGENIERO',
+            carrera: initialDocente.carrera_pregrado || '',
+            rama_especifica: initialDocente.rama_especifica || '',
+            universidad: initialDocente.universidad_pregrado || '',
+            anio: initialDocente.anio_pregrado || '',
+          },
+        ]);
       } else {
-        setTipoProfesion('INGENIERO');
+        setTitulos([
+          {
+            tipo_profesion: 'INGENIERO',
+            carrera: '',
+            rama_especifica: '',
+            universidad: '',
+            anio: '',
+          },
+        ]);
       }
-      setCarreraPregrado(initialDocente.carrera_pregrado || '');
-      setCarreraInput(initialDocente.carrera_pregrado || '');
-      setRamaEspecifica(initialDocente.rama_especifica || '');
-      setUniversidadPregrado(initialDocente.universidad_pregrado || '');
-      setAnioPregrado(initialDocente.anio_pregrado || '');
 
       setPoseeEspecialidad(initialDocente.posee_especialidad === 1);
       setEspecialidades(parseJsonSafe(initialDocente.especialidades));
@@ -241,7 +288,20 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
 
       setSelectedPnfs(parseJsonSafe(initialDocente.pnfs));
 
-      setLineaInvestigacion(initialDocente.linea_investigacion || '');
+      // Áreas de interés investigativo
+      const loadedAreas = parseJsonSafe(initialDocente.areas_interes_investigativo);
+      if (loadedAreas.length > 0) {
+        setSelectedAreas(loadedAreas);
+      } else if (initialDocente.linea_investigacion) {
+        const split = initialDocente.linea_investigacion
+          .split(/[,;\n]/)
+          .map((s: string) => s.trim())
+          .filter(Boolean);
+        setSelectedAreas(split);
+      } else {
+        setSelectedAreas([]);
+      }
+
       setInvestigacionEnDesarrollo(initialDocente.investigacion_en_desarrollo === 1);
       setInvestigacionInstituto(initialDocente.investigacion_instituto || '');
       setInvestigacionTitulo(initialDocente.investigacion_titulo || '');
@@ -252,6 +312,19 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
 
       setPublicacionesArticulos(initialDocente.publicaciones_articulos === 1);
       setArticulos(parseJsonSafe(initialDocente.articulos_detalle));
+
+      // Congresos y Seminarios
+      setParticipadoPonente(initialDocente.participado_ponente === 1);
+      setParticipadoParticipante(initialDocente.participado_participante === 1);
+      setEventos(parseJsonSafe(initialDocente.eventos_detalle));
+
+      // Desarrollo Académico
+      setDesarrolloAcademicoActual(initialDocente.desarrollo_academico_actual === 1);
+      setDesarrollosAcademicos(parseJsonSafe(initialDocente.desarrollo_academico_detalle));
+
+      // Tutoría de Proyectos
+      setTutoriaProyectosActiva(initialDocente.tutoria_proyectos_activa === 1);
+      setTutoriasProyectos(parseJsonSafe(initialDocente.tutorias_detalle));
 
       setPoseeDiplomados(initialDocente.posee_diplomados === 1);
       setDiplomados(parseJsonSafe(initialDocente.diplomados_detalle));
@@ -287,6 +360,43 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
           setDesde(doc.desde || '');
           if (doc.encuestado === 1) {
             showToast('info', 'Docente ya censado', 'Cargando datos previos para actualización.');
+
+            // Hidratar campos completos
+            const loadedTitulos = parseJsonSafe(doc.titulos_adicionales);
+            if (loadedTitulos.length > 0) {
+              setTitulos(loadedTitulos);
+            } else if (doc.carrera_pregrado) {
+              setTitulos([
+                {
+                  tipo_profesion: doc.tipo_profesion || 'INGENIERO',
+                  carrera: doc.carrera_pregrado || '',
+                  rama_especifica: doc.rama_especifica || '',
+                  universidad: doc.universidad_pregrado || '',
+                  anio: doc.anio_pregrado || '',
+                },
+              ]);
+            }
+
+            const loadedAreas = parseJsonSafe(doc.areas_interes_investigativo);
+            if (loadedAreas.length > 0) {
+              setSelectedAreas(loadedAreas);
+            } else if (doc.linea_investigacion) {
+              const split = doc.linea_investigacion
+                .split(/[,;\n]/)
+                .map((s: string) => s.trim())
+                .filter(Boolean);
+              setSelectedAreas(split);
+            }
+
+            setParticipadoPonente(doc.participado_ponente === 1);
+            setParticipadoParticipante(doc.participado_participante === 1);
+            setEventos(parseJsonSafe(doc.eventos_detalle));
+
+            setDesarrolloAcademicoActual(doc.desarrollo_academico_actual === 1);
+            setDesarrollosAcademicos(parseJsonSafe(doc.desarrollo_academico_detalle));
+
+            setTutoriaProyectosActiva(doc.tutoria_proyectos_activa === 1);
+            setTutoriasProyectos(parseJsonSafe(doc.tutorias_detalle));
           } else {
             showToast('success', 'Docente Activo Reconocido', `${doc.nombre_completo} (${doc.cargo})`);
           }
@@ -437,38 +547,98 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
   };
 
   // Handle Carrera Creation / Selection
-  const handleSelectCarrera = (c: Carrera) => {
-    setCarreraPregrado(c.nombre);
-    setCarreraInput(c.nombre);
-    if (c.tipo) setTipoProfesion(c.tipo);
-    setCarreraDropdownOpen(false);
+  // Handlers para Formación Académica (Múltiples Títulos)
+  const handleAddTitulo = () => {
+    setTitulos(prev => [
+      ...prev,
+      {
+        tipo_profesion: 'INGENIERO',
+        carrera: '',
+        rama_especifica: '',
+        universidad: '',
+        anio: '',
+      },
+    ]);
   };
 
-  const handleCreateNewCarrera = async () => {
-    if (!carreraInput.trim()) return;
-    setCreatingCarrera(true);
+  const handleRemoveTitulo = (index: number) => {
+    setTitulos(prev => prev.filter((_, i) => i !== index));
+  };
 
+  const handleUpdateTitulo = (index: number, field: keyof ItemTitulo, value: any) => {
+    setTitulos(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
+  const handleSelectCarreraForTitulo = (index: number, c: Carrera) => {
+    handleUpdateTitulo(index, 'carrera', c.nombre);
+    if (c.tipo) {
+      handleUpdateTitulo(index, 'tipo_profesion', c.tipo);
+    }
+    setActiveCarreraDropdownIndex(null);
+  };
+
+  const handleCreateNewCarreraForTitulo = async (index: number, carreraNombre: string, tipo: string) => {
+    const clean = carreraNombre.trim();
+    if (!clean) return;
     try {
       const res = await fetch('/api/carreras', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nombre: carreraInput.trim(),
-          tipo: tipoProfesion,
-        }),
+        body: JSON.stringify({ nombre: clean, tipo }),
       });
       const data = await res.json();
       if (data.success && data.carrera) {
         setCarreras(prev => [...prev, data.carrera]);
-        setCarreraPregrado(data.carrera.nombre);
-        setCarreraInput(data.carrera.nombre);
-        setCarreraDropdownOpen(false);
-        showToast('success', 'Carrera Registrada', `"${data.carrera.nombre}" se agregó a la base de datos.`);
+        handleUpdateTitulo(index, 'carrera', data.carrera.nombre);
+        setActiveCarreraDropdownIndex(null);
+        showToast('success', 'Carrera Registrada', `"${data.carrera.nombre}" se agregó al catálogo.`);
       }
     } catch (err: any) {
-      showToast('error', 'Error registrando carrera', err.message);
+      showToast('error', 'Error creando carrera', err.message);
+    }
+  };
+
+  // Toggle Área de Interés Investigativo
+  const handleToggleArea = (nombreArea: string) => {
+    setSelectedAreas(prev =>
+      prev.includes(nombreArea) ? prev.filter(a => a !== nombreArea) : [...prev, nombreArea]
+    );
+  };
+
+  // Crear y Persistir Nueva Área de Interés Investigativo
+  const handleCrearNuevaArea = async () => {
+    const clean = nuevaAreaInput.trim();
+    if (!clean) return;
+    setCreandoNuevaArea(true);
+    try {
+      const res = await fetch('/api/areas-investigacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre: clean }),
+      });
+      const data = await res.json();
+      if (data.success && data.area) {
+        setCatalogoAreas(prev => {
+          if (prev.some(a => a.nombre.toLowerCase() === data.area.nombre.toLowerCase())) return prev;
+          return [...prev, data.area];
+        });
+        if (!selectedAreas.includes(data.area.nombre)) {
+          setSelectedAreas(prev => [...prev, data.area.nombre]);
+        }
+        setNuevaAreaInput('');
+        setSearchAreaText('');
+        showToast('success', 'Área Creada', `"${data.area.nombre}" añadida al catálogo y seleccionada.`);
+      } else {
+        showToast('error', 'Error al registrar área', data.error);
+      }
+    } catch (err: any) {
+      showToast('error', 'Error de red', err.message);
     } finally {
-      setCreatingCarrera(false);
+      setCreandoNuevaArea(false);
     }
   };
 
@@ -477,6 +647,88 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
     setSelectedPnfs(prev =>
       prev.includes(nombrePnf) ? prev.filter(p => p !== nombrePnf) : [...prev, nombrePnf]
     );
+  };
+
+  // Handlers para Eventos (Congresos y Seminarios)
+  const handleAddEvento = () => {
+    setEventos(prev => [
+      ...prev,
+      {
+        tipo_evento: 'CONGRESO',
+        ambito: 'NACIONAL',
+        rol: participadoPonente ? 'PONENTE' : 'PARTICIPANTE',
+        nombre_evento: '',
+        institucion: '',
+        pais_ciudad: '',
+        fecha: '',
+        titulo_ponencia: '',
+      },
+    ]);
+  };
+
+  const handleRemoveEvento = (index: number) => {
+    setEventos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateEvento = (index: number, field: keyof ItemEvento, value: any) => {
+    setEventos(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
+  // Handlers para Desarrollo Académico Actual
+  const handleAddDesarrollo = () => {
+    setDesarrollosAcademicos(prev => [
+      ...prev,
+      {
+        tipo: 'DOCTORADO',
+        institucion: '',
+        area: '',
+        estado: 'EN CURSO',
+        fecha_estimada: '',
+      },
+    ]);
+  };
+
+  const handleRemoveDesarrollo = (index: number) => {
+    setDesarrollosAcademicos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateDesarrollo = (index: number, field: keyof ItemDesarrolloAcademico, value: any) => {
+    setDesarrollosAcademicos(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+  };
+
+  // Handlers para Tutoría de Proyectos
+  const handleAddTutoria = () => {
+    setTutoriasProyectos(prev => [
+      ...prev,
+      {
+        nombre_proyecto: '',
+        tipo_proyecto: 'PROYECTO SOCIO INTEGRADOR (PNF)',
+        nivel: 'TRAYECTO IV',
+        rol: 'TUTOR ACADEMICO',
+        estado: 'EN DESARROLLO',
+        fecha_inicio: '',
+      },
+    ]);
+  };
+
+  const handleRemoveTutoria = (index: number) => {
+    setTutoriasProyectos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateTutoria = (index: number, field: keyof ItemTutoriaProyecto, value: any) => {
+    setTutoriasProyectos(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
   };
 
   // Submit Handler
@@ -488,30 +740,19 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       return;
     }
 
-    let effectiveProfesion = tipoProfesion;
-    if (tipoProfesion === 'OTRO') {
-      const cleanOtra = otraProfesionInput.trim().toUpperCase();
-      if (!cleanOtra) {
-        showToast('error', 'Profesión Incompleta', 'Por favor especifique el nombre de la otra profesión.');
-        return;
-      }
-      effectiveProfesion = cleanOtra;
-      // Persist in background so it forms part of future selections
-      try {
-        fetch('/api/profesiones', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre: cleanOtra }),
-        }).catch(console.error);
-        setProfesionesList(prev => (prev.includes(cleanOtra) ? prev : [...prev, cleanOtra]));
-      } catch {}
-    }
-
     setLoading(true);
 
     const estadoObj = estados.find(e => e.id_estado === Number(idEstado));
     const munObj = municipios.find(m => m.id_municipio === Number(idMunicipio));
     const parObj = parroquias.find(p => p.id_parroquia === Number(idParroquia));
+
+    const primaryTitle = titulos[0] || {
+      tipo_profesion: 'INGENIERO',
+      carrera: '',
+      rama_especifica: '',
+      universidad: '',
+      anio: '',
+    };
 
     const payload = {
       cedula: cedula.trim().toUpperCase(),
@@ -532,11 +773,13 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       parroquia_nombre: parObj?.parroquia || null,
       direccion,
 
-      tipo_profesion: effectiveProfesion,
-      carrera_pregrado: carreraPregrado || carreraInput,
-      rama_especifica: ramaEspecifica,
-      universidad_pregrado: universidadPregrado,
-      anio_pregrado: anioPregrado,
+      // Formación Académica (Múltiples Títulos)
+      tipo_profesion: primaryTitle.tipo_profesion || 'INGENIERO',
+      carrera_pregrado: primaryTitle.carrera || '',
+      rama_especifica: primaryTitle.rama_especifica || '',
+      universidad_pregrado: primaryTitle.universidad || '',
+      anio_pregrado: primaryTitle.anio ? parseInt(String(primaryTitle.anio)) : null,
+      titulos_adicionales: titulos,
 
       posee_especialidad: poseeEspecialidad ? 1 : 0,
       especialidades,
@@ -555,7 +798,9 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
 
       pnfs: selectedPnfs,
 
-      linea_investigacion: lineaInvestigacion,
+      // Áreas de Interés Investigativo y Línea
+      linea_investigacion: selectedAreas.join(', '),
+      areas_interes_investigativo: selectedAreas,
       investigacion_en_desarrollo: investigacionEnDesarrollo ? 1 : 0,
       investigacion_instituto: investigacionInstituto,
       investigacion_titulo: investigacionTitulo,
@@ -566,6 +811,19 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
 
       publicaciones_articulos: publicacionesArticulos ? 1 : 0,
       articulos_detalle: articulos,
+
+      // Congresos y Seminarios
+      participado_ponente: participadoPonente ? 1 : 0,
+      participado_participante: participadoParticipante ? 1 : 0,
+      eventos_detalle: eventos,
+
+      // Desarrollo Académico
+      desarrollo_academico_actual: desarrolloAcademicoActual ? 1 : 0,
+      desarrollo_academico_detalle: desarrollosAcademicos,
+
+      // Tutoría de Proyectos
+      tutoria_proyectos_activa: tutoriaProyectosActiva ? 1 : 0,
+      tutorias_detalle: tutoriasProyectos,
 
       posee_diplomados: poseeDiplomados ? 1 : 0,
       diplomados_detalle: diplomados,
@@ -911,147 +1169,181 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
           </div>
         </section>
 
-        {/* BLOQUE 3: TÍTULO UNIVERSITARIO Y CARRERA AUTOCOMPLETABLE */}
+        {/* BLOQUE 3: FORMACIÓN ACADÉMICA (MÚLTIPLES TÍTULOS DINÁMICOS) */}
         <section className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
-            <span className="w-5 h-5 rounded-full bg-[#0B4D94] text-white text-xs flex items-center justify-center font-bold">
-              3
-            </span>
-            <span>Título Universitario y Clasificación Profesional</span>
-          </h3>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[#0B4D94] text-white text-xs flex items-center justify-center font-bold">
+                3
+              </span>
+              <span>Formación Académica</span>
+            </h3>
+            <button
+              type="button"
+              onClick={handleAddTitulo}
+              className="text-xs bg-blue-50 text-[#0B4D94] hover:bg-blue-100 font-bold px-3 py-1.5 rounded-lg border border-blue-200 transition-all flex items-center gap-1.5 shadow-2xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Agregar Título Universitario</span>
+            </button>
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Tipo de Profesión Principal <span className="text-rose-500">*</span>
-              </label>
-              <select
-                value={tipoProfesion}
-                onChange={e => {
-                  setTipoProfesion(e.target.value);
-                  if (e.target.value !== 'OTRO') {
-                    setOtraProfesionInput('');
-                  }
-                }}
-                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 bg-white font-semibold text-[#0B4D94] focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+          <div className="space-y-4">
+            {titulos.map((tit, idx) => (
+              <div
+                key={idx}
+                className="p-4 sm:p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 relative transition-all shadow-2xs hover:border-slate-300"
               >
-                {profesionesList.map(prof => (
-                  <option key={prof} value={prof}>
-                    {prof}
-                  </option>
-                ))}
-                <option value="OTRO">OTRO (Especificar otra profesión...)</option>
-              </select>
-            </div>
-
-            {tipoProfesion === 'OTRO' && (
-              <div className="animate-slide-in">
-                <label className="block text-xs font-bold text-amber-900 mb-1">
-                  Especifique la Profesión <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="EJ. ECONOMISTA, PSICÓLOGO, SOCIÓLOGO..."
-                  value={otraProfesionInput}
-                  onChange={e => setOtraProfesionInput(e.target.value.toUpperCase())}
-                  className="w-full text-xs border-2 border-amber-400 bg-amber-50/50 rounded-lg p-2.5 font-bold uppercase focus:ring-2 focus:ring-[#0B4D94] focus:outline-none text-slate-900"
-                />
-                <p className="text-[10px] text-slate-500 mt-1">
-                  Se guardará en mayúsculas y formará parte de las opciones para otros docentes.
-                </p>
-              </div>
-            )}
-
-            {/* CARRERA AUTOCOMPLETABLE CON CREACIÓN EN CALIENTE */}
-            <div className="relative">
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Carrera Universitaria de Pregrado <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="Escriba para buscar o crear..."
-                value={carreraInput}
-                onChange={e => {
-                  setCarreraInput(e.target.value);
-                  setCarreraPregrado(e.target.value);
-                  setCarreraDropdownOpen(true);
-                }}
-                onFocus={() => setCarreraDropdownOpen(true)}
-                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
-              />
-
-              {/* Dropdown de Carreras Existentes o Opción de Crear */}
-              {carreraDropdownOpen && carreraInput.trim().length > 0 && (
-                <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-20 max-h-52 overflow-y-auto divide-y divide-slate-100">
-                  {carreras
-                    .filter(c => c.nombre.toLowerCase().includes(carreraInput.toLowerCase()))
-                    .slice(0, 8)
-                    .map(c => (
-                      <div
-                        key={c.id}
-                        onClick={() => handleSelectCarrera(c)}
-                        className="p-2.5 hover:bg-blue-50 text-xs cursor-pointer flex items-center justify-between text-slate-800"
-                      >
-                        <span className="font-medium">{c.nombre}</span>
-                        <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">
-                          {c.tipo}
-                        </span>
-                      </div>
-                    ))}
-
-                  {/* Botón para crear nueva carrera si no coincide exacto */}
-                  {!carreras.some(c => c.nombre.toLowerCase() === carreraInput.trim().toLowerCase()) && (
-                    <div
-                      onClick={handleCreateNewCarrera}
-                      className="p-3 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold cursor-pointer flex items-center gap-2 border-t border-amber-200"
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-[#0B4D94] text-white text-[10px] font-bold px-2 py-0.5 rounded-md">
+                      Título #{idx + 1}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-700">
+                      {tit.carrera || 'Nuevo Título de Grado'}
+                    </span>
+                  </div>
+                  {titulos.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTitulo(idx)}
+                      title="Eliminar este título"
+                      className="text-rose-500 hover:text-rose-700 p-1 rounded-md hover:bg-rose-50 transition-colors"
                     >
-                      <Plus className="w-4 h-4 text-amber-600" />
-                      <span>
-                        Registrar "{carreraInput.trim()}" en la base de datos de carreras
-                      </span>
-                    </div>
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   )}
                 </div>
-              )}
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Rama Específica de la Profesión
-              </label>
-              <input
-                type="text"
-                placeholder="Ej. Mecánica Térmica, Sistemas, etc."
-                value={ramaEspecifica}
-                onChange={e => setRamaEspecifica(e.target.value)}
-                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
-              />
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Tipo de Profesión */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Tipo de Profesión <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={tit.tipo_profesion}
+                      onChange={e => handleUpdateTitulo(idx, 'tipo_profesion', e.target.value)}
+                      className="w-full text-xs border border-slate-300 rounded-lg p-2.5 bg-white font-semibold text-[#0B4D94] focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                    >
+                      {profesionesList.map(prof => (
+                        <option key={prof} value={prof}>
+                          {prof}
+                        </option>
+                      ))}
+                      <option value="OTRO">OTRO (Especificar otra profesión...)</option>
+                    </select>
+                  </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Universidad de Egreso</label>
-              <input
-                type="text"
-                placeholder="Ej. Universidad de Carabobo, UPTPC, USB"
-                value={universidadPregrado}
-                onChange={e => setUniversidadPregrado(e.target.value)}
-                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
-              />
-            </div>
+                  {tit.tipo_profesion === 'OTRO' && (
+                    <div className="animate-slide-in">
+                      <label className="block text-xs font-bold text-amber-900 mb-1">
+                        Especifique la Profesión <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="EJ. ECONOMISTA, PSICÓLOGO..."
+                        value={tit.rama_especifica || ''}
+                        onChange={e => handleUpdateTitulo(idx, 'rama_especifica', e.target.value.toUpperCase())}
+                        className="w-full text-xs border-2 border-amber-400 bg-amber-50/50 rounded-lg p-2.5 font-bold uppercase focus:ring-2 focus:ring-[#0B4D94] focus:outline-none text-slate-900"
+                      />
+                    </div>
+                  )}
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Año de Graduación</label>
-              <input
-                type="number"
-                min="1960"
-                max="2035"
-                placeholder="Ej. 2005"
-                value={anioPregrado}
-                onChange={e => setAnioPregrado(e.target.value)}
-                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
-              />
-            </div>
+                  {/* Carrera Universitaria Autocompletable */}
+                  <div className="relative">
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Carrera Universitaria / Título Obtenido <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Escriba para buscar o registrar carrera..."
+                      value={tit.carrera}
+                      onChange={e => {
+                        handleUpdateTitulo(idx, 'carrera', e.target.value);
+                        setActiveCarreraDropdownIndex(idx);
+                      }}
+                      onFocus={() => setActiveCarreraDropdownIndex(idx)}
+                      className="w-full text-xs border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                    />
+
+                    {/* Dropdown de Carreras */}
+                    {activeCarreraDropdownIndex === idx && tit.carrera.trim().length > 0 && (
+                      <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-20 max-h-52 overflow-y-auto divide-y divide-slate-100">
+                        {carreras
+                          .filter(c => c.nombre.toLowerCase().includes(tit.carrera.toLowerCase()))
+                          .slice(0, 8)
+                          .map(c => (
+                            <div
+                              key={c.id}
+                              onClick={() => handleSelectCarreraForTitulo(idx, c)}
+                              className="p-2.5 hover:bg-blue-50 text-xs cursor-pointer flex items-center justify-between text-slate-800"
+                            >
+                              <span className="font-medium">{c.nombre}</span>
+                              <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">
+                                {c.tipo}
+                              </span>
+                            </div>
+                          ))}
+
+                        {!carreras.some(c => c.nombre.toLowerCase() === tit.carrera.trim().toLowerCase()) && (
+                          <div
+                            onClick={() => handleCreateNewCarreraForTitulo(idx, tit.carrera, tit.tipo_profesion)}
+                            className="p-3 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold cursor-pointer flex items-center gap-2 border-t border-amber-200"
+                          >
+                            <Plus className="w-4 h-4 text-amber-600" />
+                            <span>
+                              Registrar "{tit.carrera.trim()}" en el catálogo de carreras
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Rama Específica */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Rama Específica o Mención
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Mecánica Térmica, Sistemas..."
+                      value={tit.rama_especifica || ''}
+                      onChange={e => handleUpdateTitulo(idx, 'rama_especifica', e.target.value)}
+                      className="w-full text-xs border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Universidad de Egreso */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Universidad de Egreso</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. UPTPC, Universidad de Carabobo, USB"
+                      value={tit.universidad || ''}
+                      onChange={e => handleUpdateTitulo(idx, 'universidad', e.target.value)}
+                      className="w-full text-xs border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Año de Graduación */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Año de Graduación</label>
+                    <input
+                      type="number"
+                      min="1960"
+                      max="2035"
+                      placeholder="Ej. 2005"
+                      value={tit.anio || ''}
+                      onChange={e => handleUpdateTitulo(idx, 'anio', e.target.value)}
+                      className="w-full text-xs border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -1447,7 +1739,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
           </div>
         </section>
 
-        {/* BLOQUE 6: LÍNEAS DE INVESTIGACIÓN Y PRODUCCIÓN INTELECTUAL */}
+        {/* BLOQUE 6: ÁREAS DE INTERÉS INVESTIGATIVO Y PRODUCCIÓN INTELECTUAL */}
         <section className="space-y-4">
           <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
             <span className="w-5 h-5 rounded-full bg-[#0B4D94] text-white text-xs flex items-center justify-center font-bold">
@@ -1457,17 +1749,132 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
           </h3>
 
           <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Línea de Investigación del Docente
-              </label>
-              <input
-                type="text"
-                placeholder="Ej. Energías Renovables, Inteligencia Artificial, Mantenimiento Predictivo..."
-                value={lineaInvestigacion}
-                onChange={e => setLineaInvestigacion(e.target.value)}
-                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
-              />
+            {/* ÁREA DE INTERÉS INVESTIGATIVO (Taxonomía SQL + Selección Múltiple + Creación) */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 uppercase tracking-wide">
+                    ÁREA DE INTERÉS INVESTIGATIVO
+                  </label>
+                  <p className="text-[11px] text-slate-500">
+                    Seleccione una o más áreas temáticas del catálogo institucional o registre una nueva disponible para toda la comunidad docente.
+                  </p>
+                </div>
+                <span className="text-[11px] font-semibold text-[#0B4D94] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 self-start sm:self-auto">
+                  {selectedAreas.length} {selectedAreas.length === 1 ? 'área seleccionada' : 'áreas seleccionadas'}
+                </span>
+              </div>
+
+              {/* Áreas seleccionadas (Chips) */}
+              {selectedAreas.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 p-3 bg-white border border-blue-200 rounded-lg shadow-inner">
+                  {selectedAreas.map(area => (
+                    <span
+                      key={area}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#0B4D94] text-white text-xs font-medium rounded-lg shadow-sm"
+                    >
+                      <Atom className="w-3 h-3 text-cyan-200" />
+                      <span>{area}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleArea(area)}
+                        className="hover:text-rose-200 p-0.5"
+                        title="Quitar área"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Filtro / Buscador y selector de áreas */}
+              <div className="space-y-2">
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Buscar área en el catálogo (ej: Inteligencia Artificial, Energías, Automatización, Nanotecnología...)"
+                    value={searchAreaText}
+                    onChange={e => setSearchAreaText(e.target.value)}
+                    className="w-full text-xs border border-slate-300 rounded-lg pl-9 pr-3 py-2 bg-white focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                  />
+                </div>
+
+                <div className="max-h-52 overflow-y-auto border border-slate-200 rounded-lg bg-white p-2.5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
+                  {catalogoAreas
+                    .filter(a =>
+                      searchAreaText
+                        ? a.nombre.toLowerCase().includes(searchAreaText.toLowerCase())
+                        : true
+                    )
+                    .slice(0, 60)
+                    .map(area => {
+                      const isSelected = selectedAreas.includes(area.nombre);
+                      return (
+                        <button
+                          key={area.id || area.nombre}
+                          type="button"
+                          onClick={() => handleToggleArea(area.nombre)}
+                          className={`flex items-start gap-1.5 text-left text-xs p-1.5 rounded border transition-all ${
+                            isSelected
+                              ? 'bg-blue-50 border-blue-300 text-[#0B4D94] font-bold shadow-sm'
+                              : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <span className={`w-3.5 h-3.5 mt-0.5 rounded flex items-center justify-center shrink-0 text-[10px] ${
+                            isSelected ? 'bg-[#0B4D94] text-white' : 'border border-slate-300'
+                          }`}>
+                            {isSelected ? '✓' : ''}
+                          </span>
+                          <span className="leading-tight line-clamp-2">{area.nombre}</span>
+                        </button>
+                      );
+                    })}
+                  {catalogoAreas.filter(a =>
+                    searchAreaText ? a.nombre.toLowerCase().includes(searchAreaText.toLowerCase()) : true
+                  ).length === 0 && (
+                    <div className="col-span-full py-4 text-center text-xs text-slate-400">
+                      No se encontraron áreas con &ldquo;{searchAreaText}&rdquo;. Puede registrarla abajo.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Crear y Registrar Nueva Área */}
+              <div className="pt-2 border-t border-slate-200">
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  ¿No encuentra su área en el catálogo? Agréguela aquí:
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Escriba el nombre del área de interés..."
+                    value={nuevaAreaInput}
+                    onChange={e => setNuevaAreaInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleCrearNuevaArea();
+                      }
+                    }}
+                    className="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCrearNuevaArea}
+                    disabled={creandoNuevaArea || !nuevaAreaInput.trim()}
+                    className="bg-[#0B4D94] hover:bg-[#073262] text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1.5 transition-all disabled:opacity-50 shrink-0"
+                  >
+                    {creandoNuevaArea ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Plus className="w-3.5 h-3.5" />
+                    )}
+                    <span>+ Crear y Seleccionar</span>
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Investigación en Desarrollo */}
@@ -1704,11 +2111,541 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
           </div>
         </section>
 
-        {/* BLOQUE 7: DIPLOMADOS Y POTENCIALIDADES PROFESIONALES */}
+        {/* BLOQUE 7: CONGRESOS Y SEMINARIOS (NACIONALES E INTERNACIONALES) */}
         <section className="space-y-4">
           <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
             <span className="w-5 h-5 rounded-full bg-[#0B4D94] text-white text-xs flex items-center justify-center font-bold">
               7
+            </span>
+            <span>Participación en Congresos y Seminarios Científicos</span>
+          </h3>
+
+          <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* ¿Ha participado como Ponente? */}
+              <div className="bg-white p-3 rounded-lg border border-slate-200 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-slate-800">¿Ha participado como Ponente?</p>
+                  <p className="text-[11px] text-slate-500">Presentación de ponencias o conferencias</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParticipadoPonente(true);
+                      if (eventos.length === 0) handleAddEvento();
+                    }}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                      participadoPonente
+                        ? 'bg-[#0B4D94] text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Sí
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParticipadoPonente(false);
+                      if (!participadoParticipante) setEventos([]);
+                    }}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                      !participadoPonente
+                        ? 'bg-slate-700 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+
+              {/* ¿Ha participado como Participante? */}
+              <div className="bg-white p-3 rounded-lg border border-slate-200 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-slate-800">¿Ha participado como Participante?</p>
+                  <p className="text-[11px] text-slate-500">Asistencia acreditada a eventos académicos</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParticipadoParticipante(true);
+                      if (eventos.length === 0) handleAddEvento();
+                    }}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                      participadoParticipante
+                        ? 'bg-[#0B4D94] text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Sí
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParticipadoParticipante(false);
+                      if (!participadoPonente) setEventos([]);
+                    }}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                      !participadoParticipante
+                        ? 'bg-slate-700 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Dynamic Event Repeater */}
+            {(participadoPonente || participadoParticipante) && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                    Detalle de Congresos y Seminarios
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={handleAddEvento}
+                    className="text-xs text-[#0B4D94] font-bold flex items-center gap-1 hover:underline"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Agregar Evento</span>
+                  </button>
+                </div>
+
+                {eventos.map((ev, idx) => (
+                  <div key={idx} className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-3 relative shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveEvento(idx)}
+                      className="absolute right-3 top-3 text-rose-500 hover:text-rose-700 p-1"
+                      title="Eliminar evento"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pr-8">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Tipo de Evento</label>
+                        <select
+                          value={ev.tipo_evento}
+                          onChange={e => handleUpdateEvento(idx, 'tipo_evento', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white"
+                        >
+                          <option value="CONGRESO">Congreso</option>
+                          <option value="SEMINARIO">Seminario</option>
+                          <option value="SIMPOSIO">Simposio</option>
+                          <option value="JORNADA">Jornada Científica</option>
+                          <option value="TALLER">Taller Especializado</option>
+                          <option value="COLOQUIO">Coloquio / Foro</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Ámbito</label>
+                        <select
+                          value={ev.ambito}
+                          onChange={e => handleUpdateEvento(idx, 'ambito', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white"
+                        >
+                          <option value="NACIONAL">Nacional</option>
+                          <option value="INTERNACIONAL">Internacional</option>
+                          <option value="REGIONAL">Regional</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Rol Desempeñado</label>
+                        <select
+                          value={ev.rol}
+                          onChange={e => handleUpdateEvento(idx, 'rol', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white font-medium text-[#0B4D94]"
+                        >
+                          <option value="PONENTE">Ponente / Conferencista</option>
+                          <option value="PARTICIPANTE">Participante / Asistente</option>
+                          <option value="ORGANIZADOR">Comité Organizador / Moderador</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Nombre del Evento</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. I Congreso Internacional de Ingeniería y Tecnología UPTPC"
+                          value={ev.nombre_evento}
+                          onChange={e => handleUpdateEvento(idx, 'nombre_evento', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Institución Organizadora</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. UPTPC / IVIC / OPSU / Universidad de Carabobo"
+                          value={ev.institucion}
+                          onChange={e => handleUpdateEvento(idx, 'institucion', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">País / Ciudad</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. Puerto Cabello, Venezuela / Bogotá, Colombia"
+                          value={ev.pais_ciudad}
+                          onChange={e => handleUpdateEvento(idx, 'pais_ciudad', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Fecha o Año</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. Nov 2024 / 2023"
+                          value={ev.fecha}
+                          onChange={e => handleUpdateEvento(idx, 'fecha', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2"
+                        />
+                      </div>
+                    </div>
+
+                    {ev.rol === 'PONENTE' && (
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Título de la Ponencia o Conferencia Presentada
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Indique el título exacto de la ponencia..."
+                          value={ev.titulo_ponencia || ''}
+                          onChange={e => handleUpdateEvento(idx, 'titulo_ponencia', e.target.value)}
+                          className="w-full text-xs border border-blue-200 rounded-lg p-2 bg-blue-50/40"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* BLOQUE 8: DESARROLLO ACADÉMICO ACTUAL */}
+        <section className="space-y-4">
+          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
+            <span className="w-5 h-5 rounded-full bg-[#0B4D94] text-white text-xs flex items-center justify-center font-bold">
+              8
+            </span>
+            <span>Desarrollo Académico Actual en Curso</span>
+          </h3>
+
+          <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-4">
+            <div className="bg-white p-3 rounded-lg border border-slate-200 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-slate-800">
+                  ¿Actualmente está realizando algún desarrollo académico?
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Estudios de postgrado en curso, diplomados, certificaciones o programas de formación continua
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDesarrolloAcademicoActual(true);
+                    if (desarrollosAcademicos.length === 0) handleAddDesarrollo();
+                  }}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    desarrolloAcademicoActual
+                      ? 'bg-[#0B4D94] text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Sí
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDesarrolloAcademicoActual(false);
+                    setDesarrollosAcademicos([]);
+                  }}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    !desarrolloAcademicoActual
+                      ? 'bg-slate-700 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+
+            {desarrolloAcademicoActual && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                    Estudios y Programas en Desarrollo
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={handleAddDesarrollo}
+                    className="text-xs text-[#0B4D94] font-bold flex items-center gap-1 hover:underline"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Agregar Programa</span>
+                  </button>
+                </div>
+
+                {desarrollosAcademicos.map((dev, idx) => (
+                  <div key={idx} className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-3 relative shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveDesarrollo(idx)}
+                      className="absolute right-3 top-3 text-rose-500 hover:text-rose-700 p-1"
+                      title="Eliminar programa"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pr-8">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Tipo de Desarrollo / Nivel</label>
+                        <select
+                          value={dev.tipo}
+                          onChange={e => handleUpdateDesarrollo(idx, 'tipo', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white"
+                        >
+                          <option value="DOCTORADO">Doctorado</option>
+                          <option value="MAESTRIA">Maestría</option>
+                          <option value="ESPECIALIZACION">Especialización</option>
+                          <option value="DIPLOMADO">Diplomado Avanzado</option>
+                          <option value="CERTIFICACION">Certificación Internacional / Profesional</option>
+                          <option value="POSTDOCTORADO">Postdoctorado</option>
+                          <option value="OTRO">Otro Programa</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Estado Actual</label>
+                        <select
+                          value={dev.estado}
+                          onChange={e => handleUpdateDesarrollo(idx, 'estado', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white font-medium text-emerald-700"
+                        >
+                          <option value="EN CURSO">En Curso (Escolaridad)</option>
+                          <option value="TESIS EN ELABORACION">Tesis / TEG en Elaboración</option>
+                          <option value="FASE FINAL">Fase Final / Por Defender</option>
+                          <option value="CULMINADO PENDIENTE GRADO">Culminado (Pendiente Acto de Grado)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Área o Nombre del Programa</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. Ciencias de la Educación, Gerencia de Redes, Robótica..."
+                          value={dev.area}
+                          onChange={e => handleUpdateDesarrollo(idx, 'area', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Año / Fecha Estimada</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. 2025 / 2026"
+                          value={dev.fecha_estimada || ''}
+                          onChange={e => handleUpdateDesarrollo(idx, 'fecha_estimada', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Institución / Universidad</label>
+                      <input
+                        type="text"
+                        placeholder="Ej. Universidad Central de Venezuela / UPTPC / UNERG..."
+                        value={dev.institucion}
+                        onChange={e => handleUpdateDesarrollo(idx, 'institucion', e.target.value)}
+                        className="w-full text-xs border border-slate-200 rounded-lg p-2"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* BLOQUE 9: TUTORÍA DE PROYECTOS */}
+        <section className="space-y-4">
+          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
+            <span className="w-5 h-5 rounded-full bg-[#0B4D94] text-white text-xs flex items-center justify-center font-bold">
+              9
+            </span>
+            <span>Tutoría y Asesoría de Proyectos Académicos</span>
+          </h3>
+
+          <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-4">
+            <div className="bg-white p-3 rounded-lg border border-slate-200 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-slate-800">
+                  ¿Está tutorando o asesorando proyectos actualmente?
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Proyectos Socio Integradores (PNF), Trabajos Especiales de Grado (TEG) o Tesis de Postgrado
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTutoriaProyectosActiva(true);
+                    if (tutoriasProyectos.length === 0) handleAddTutoria();
+                  }}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    tutoriaProyectosActiva
+                      ? 'bg-[#0B4D94] text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Sí
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTutoriaProyectosActiva(false);
+                    setTutoriasProyectos([]);
+                  }}
+                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    !tutoriaProyectosActiva
+                      ? 'bg-slate-700 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+
+            {tutoriaProyectosActiva && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                    Proyectos en Tutoría
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={handleAddTutoria}
+                    className="text-xs text-[#0B4D94] font-bold flex items-center gap-1 hover:underline"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Agregar Proyecto</span>
+                  </button>
+                </div>
+
+                {tutoriasProyectos.map((tut, idx) => (
+                  <div key={idx} className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-3 relative shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTutoria(idx)}
+                      className="absolute right-3 top-3 text-rose-500 hover:text-rose-700 p-1"
+                      title="Eliminar proyecto"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
+                    <div className="pr-8">
+                      <label className="block text-[11px] font-bold text-slate-600 mb-1">Nombre o Título del Proyecto</label>
+                      <input
+                        type="text"
+                        placeholder="Ej. Sistema Automatizado de Control de Calidad en Planta de Tratamiento..."
+                        value={tut.nombre_proyecto}
+                        onChange={e => handleUpdateTutoria(idx, 'nombre_proyecto', e.target.value)}
+                        className="w-full text-xs border border-slate-200 rounded-lg p-2"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Tipo de Proyecto</label>
+                        <select
+                          value={tut.tipo_proyecto}
+                          onChange={e => handleUpdateTutoria(idx, 'tipo_proyecto', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white"
+                        >
+                          <option value="PROYECTO SOCIO INTEGRADOR (PNF)">PNF (Socio Integrador)</option>
+                          <option value="TRABAJO ESPECIAL DE GRADO (TEG)">Trabajo Especial de Grado (TEG)</option>
+                          <option value="TESIS DE MAESTRIA">Tesis de Maestría</option>
+                          <option value="TESIS DOCTORAL">Tesis Doctoral</option>
+                          <option value="PROYECTO DE INVESTIGACION INSTITUCIONAL">Investigación Institucional</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Nivel / Trayecto</label>
+                        <input
+                          type="text"
+                          placeholder="Ej. Trayecto IV / Postgrado"
+                          value={tut.nivel}
+                          onChange={e => handleUpdateTutoria(idx, 'nivel', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Rol Desempeñado</label>
+                        <select
+                          value={tut.rol}
+                          onChange={e => handleUpdateTutoria(idx, 'rol', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white font-medium text-[#0B4D94]"
+                        >
+                          <option value="TUTOR ACADEMICO">Tutor Académico</option>
+                          <option value="TUTOR METODOLOGICO">Tutor Metodológico</option>
+                          <option value="ASESOR TECNICO">Asesor Técnico</option>
+                          <option value="JURADO EVALUADOR">Jurado Evaluador</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-600 mb-1">Estado</label>
+                        <select
+                          value={tut.estado}
+                          onChange={e => handleUpdateTutoria(idx, 'estado', e.target.value)}
+                          className="w-full text-xs border border-slate-200 rounded-lg p-2 bg-slate-50 focus:bg-white font-medium text-emerald-700"
+                        >
+                          <option value="EN DESARROLLO">En Desarrollo</option>
+                          <option value="REVISION">En Revisión</option>
+                          <option value="FASE DE APROBACION">Fase de Aprobación</option>
+                          <option value="CULMINADO">Culminado / Defendido</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* BLOQUE 10: DIPLOMADOS Y POTENCIALIDADES PROFESIONALES */}
+        <section className="space-y-4">
+          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
+            <span className="w-5 h-5 rounded-full bg-[#0B4D94] text-white text-xs flex items-center justify-center font-bold">
+              10
             </span>
             <span>Diplomados y Potencialidades Profesionales</span>
           </h3>

@@ -59,6 +59,10 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
   });
   const [savingEncuestadorPermisos, setSavingEncuestadorPermisos] = useState(false);
 
+  // Observatorio Visibility Toggle State
+  const [observatorioPublico, setObservatorioPublico] = useState<boolean>(false);
+  const [savingObservatorioPublico, setSavingObservatorioPublico] = useState<boolean>(false);
+
   // Load config on mount
   useEffect(() => {
     fetch('/api/configuracion')
@@ -71,10 +75,47 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
           if (data.config?.encuestador_permisos) {
             setEncuestadorPermisos(data.config.encuestador_permisos);
           }
+          if (data.config?.observatorio_publico !== undefined) {
+            setObservatorioPublico(
+              data.config.observatorio_publico === true || data.config.observatorio_publico === 'true'
+            );
+          }
         }
       })
       .catch(console.error);
   }, []);
+
+  const handleToggleObservatorioPublico = async (newValue: boolean) => {
+    setSavingObservatorioPublico(true);
+    try {
+      const res = await fetch('/api/configuracion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clave: 'observatorio_publico',
+          valor: newValue,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setObservatorioPublico(newValue);
+        showToast(
+          'success',
+          'Visibilidad del Observatorio Actualizada',
+          newValue
+            ? 'El Observatorio ahora es PÚBLICO (cualquier visitante puede verlo sin iniciar sesión).'
+            : 'El Observatorio ahora es PRIVADO (requiere inicio de sesión obligatorio).'
+        );
+        onPermissionsUpdated();
+      } else {
+        showToast('error', 'Error al guardar configuración', json.error);
+      }
+    } catch (err: any) {
+      showToast('error', 'Error de conexión', err.message);
+    } finally {
+      setSavingObservatorioPublico(false);
+    }
+  };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,6 +235,108 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
         <p className="text-xs text-slate-500 mt-0.5">
           Modifique su clave de acceso y defina las secciones a las que tienen permiso los administradores (ADMIN).
         </p>
+      </div>
+
+      {/* PANEL DESTACADO: CONTROL DE VISIBILIDAD DEL OBSERVATORIO */}
+      <div className="p-6 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 border border-blue-200/80 rounded-2xl space-y-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 bg-[#0B4D94] text-white rounded-xl shadow-xs mt-0.5">
+              <Eye className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-sm text-slate-900">
+                  Visibilidad y Acceso al Observatorio Institucional
+                </h3>
+                <span
+                  className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                    observatorioPublico
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-amber-100 text-amber-900 border border-amber-300'
+                  }`}
+                >
+                  {observatorioPublico ? 'Público (Abierto)' : 'Privado (Requiere Login)'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-1 max-w-2xl">
+                Controle si cualquier visitante puede ver los indicadores del <strong>#observatorio</strong> sin iniciar sesión, o si requiere autenticación obligatoria.
+              </p>
+            </div>
+          </div>
+
+          {/* Toggle Switch */}
+          <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-slate-200 shadow-xs self-start sm:self-center">
+            <span className={`text-xs font-semibold ${!observatorioPublico ? 'text-[#0B4D94] font-bold' : 'text-slate-500'}`}>
+              Privado
+            </span>
+            <button
+              type="button"
+              disabled={savingObservatorioPublico}
+              onClick={() => handleToggleObservatorioPublico(!observatorioPublico)}
+              className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#0B4D94] focus:ring-offset-2 ${
+                observatorioPublico ? 'bg-[#0B4D94]' : 'bg-slate-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  observatorioPublico ? 'translate-x-7' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span className={`text-xs font-semibold ${observatorioPublico ? 'text-[#0B4D94] font-bold' : 'text-slate-500'}`}>
+              Público
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div
+            onClick={() => handleToggleObservatorioPublico(true)}
+            className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+              observatorioPublico
+                ? 'bg-white border-[#0B4D94] ring-1 ring-[#0B4D94] shadow-xs'
+                : 'bg-white/60 border-slate-200 hover:bg-white text-slate-600'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-800">#observatorio público</span>
+              <input
+                type="radio"
+                name="obs_visibility"
+                checked={observatorioPublico}
+                onChange={() => handleToggleObservatorioPublico(true)}
+                className="text-[#0B4D94]"
+              />
+            </div>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Cualquier visitante puede verlo desde el menú sin necesidad de iniciar sesión.
+            </p>
+          </div>
+
+          <div
+            onClick={() => handleToggleObservatorioPublico(false)}
+            className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+              !observatorioPublico
+                ? 'bg-white border-[#0B4D94] ring-1 ring-[#0B4D94] shadow-xs'
+                : 'bg-white/60 border-slate-200 hover:bg-white text-slate-600'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-800">#observatorio privado</span>
+              <input
+                type="radio"
+                name="obs_visibility"
+                checked={!observatorioPublico}
+                onChange={() => handleToggleObservatorioPublico(false)}
+                className="text-[#0B4D94]"
+              />
+            </div>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Requiere inicio de sesión obligatorio para ver cualquier dato o gráfico institucional.
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">

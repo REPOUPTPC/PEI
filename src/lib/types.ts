@@ -87,6 +87,52 @@ export interface ItemDiplomado {
   horas?: string | number;
 }
 
+export interface ItemTitulo {
+  tipo_profesion: string;
+  carrera: string;
+  rama_especifica?: string;
+  universidad: string;
+  anio?: string | number;
+}
+
+export interface ItemEvento {
+  tipo_evento: string; // 'Congreso' | 'Seminario' | 'Jornada' | 'Simposio' | 'Otro'
+  ambito: string; // 'Nacional' | 'Internacional'
+  rol: string; // 'Ponente' | 'Participante'
+  nombre_evento: string;
+  institucion_organizadora?: string;
+  institucion?: string;
+  pais_ciudad: string;
+  fecha: string;
+  titulo_ponencia?: string;
+}
+
+export interface ItemDesarrolloAcademico {
+  tipo: string;
+  institucion: string;
+  area: string;
+  estado: string;
+  fecha_estimada: string;
+}
+
+export interface ItemTutoriaProyecto {
+  nombre_proyecto: string;
+  tipo?: string;
+  tipo_proyecto?: string;
+  nivel: string; // 'Pregrado' | 'Postgrado'
+  rol: string; // 'Tutor' | 'Co-tutor'
+  estado: string;
+  fecha_inicio?: string;
+}
+
+export interface AreaInteresInvestigativo {
+  id: number;
+  nombre: string;
+  parent_id?: number | null;
+  nivel: number;
+  created_at?: string;
+}
+
 export interface Docente {
   cedula: string;
   nombres: string;
@@ -114,7 +160,7 @@ export interface Docente {
   rama_especifica?: string;
   universidad_pregrado?: string;
   anio_pregrado?: number;
-  titulos_adicionales?: string; // JSON de ItemAcademico[]
+  titulos_adicionales?: string; // JSON de ItemTitulo[]
 
   posee_especialidad?: number;
   especialidades?: string; // JSON de ItemAcademico[]
@@ -132,6 +178,7 @@ export interface Docente {
   pnfs?: string; // JSON de string[] con los nombres o códigos de PNF
 
   linea_investigacion?: string;
+  areas_interes_investigativo?: string; // JSON de string[]
   investigacion_en_desarrollo?: number;
   investigacion_instituto?: string;
   investigacion_titulo?: string;
@@ -141,6 +188,16 @@ export interface Docente {
   libros_detalle?: string; // JSON de ItemLibro[]
   publicaciones_articulos?: number;
   articulos_detalle?: string; // JSON de ItemArticulo[]
+
+  participado_ponente?: number;
+  participado_participante?: number;
+  eventos_detalle?: string; // JSON de ItemEvento[]
+
+  desarrollo_academico_actual?: number;
+  desarrollo_academico_detalle?: string; // JSON de ItemDesarrolloAcademico[]
+
+  tutoria_proyectos_activa?: number;
+  tutorias_detalle?: string; // JSON de ItemTutoriaProyecto[]
 
   posee_diplomados?: number;
   diplomados_detalle?: string; // JSON de ItemDiplomado[]

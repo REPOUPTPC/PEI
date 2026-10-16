@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
+import { BarChart3 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
+import { InicioLanding } from '@/components/InicioLanding';
 import { Observatorio } from '@/components/Observatorio';
 import { DirectorioDocentes } from '@/components/DirectorioDocentes';
 import { EncuestaForm } from '@/components/EncuestaForm';
@@ -18,13 +20,14 @@ import { Docente, ObservatorioStats, Usuario, AdminPermisos, EncuestadorPermisos
 export default function Home() {
   const { showToast } = useToast();
 
-  // Navigation hash routing state
-  const [currentHash, setCurrentHash] = useState<string>('#observatorio');
+  // Navigation hash routing state - default to #inicio (Institutional Landing)
+  const [currentHash, setCurrentHash] = useState<string>('#inicio');
 
   // Auth & Session state
   const [currentUser, setCurrentUser] = useState<Usuario | null>(null);
   const [adminPermisos, setAdminPermisos] = useState<AdminPermisos | null>(null);
   const [encuestadorPermisos, setEncuestadorPermisos] = useState<EncuestadorPermisos | null>(null);
+  const [observatorioPublico, setObservatorioPublico] = useState<boolean>(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
 
   // Data states
@@ -41,7 +44,7 @@ export default function Home() {
   // 1. Initialize and listen to Hash Navigation
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash || '#observatorio';
+      const hash = window.location.hash || '#inicio';
       setCurrentHash(hash);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -50,7 +53,7 @@ export default function Home() {
     if (window.location.hash) {
       setCurrentHash(window.location.hash);
     } else {
-      window.location.hash = '#observatorio';
+      setCurrentHash('#inicio');
     }
 
     window.addEventListener('hashchange', handleHashChange);
@@ -124,6 +127,10 @@ export default function Home() {
           setEncuestadorPermisos(dCfg.config.encuestador_permisos);
           localStorage.setItem('pei_encuestador_permisos', JSON.stringify(dCfg.config.encuestador_permisos));
         }
+        if (dCfg.config?.observatorio_publico !== undefined) {
+          const isPub = dCfg.config.observatorio_publico === true || dCfg.config.observatorio_publico === 'true';
+          setObservatorioPublico(isPub);
+        }
       }
     } catch (err: any) {
       console.error('Error fetching /api/configuracion:', err);
@@ -147,6 +154,8 @@ export default function Home() {
     // Navigate to dashboard if admin/superadmin
     if (user.rol === 'SUPERADMIN' || user.rol === 'ADMIN') {
       window.location.hash = '#dashboard';
+    } else {
+      window.location.hash = '#observatorio';
     }
   };
 
@@ -158,7 +167,7 @@ export default function Home() {
     localStorage.removeItem('pei_permisos');
     localStorage.removeItem('pei_encuestador_permisos');
     showToast('info', 'Sesión Cerrada', 'Ha salido del sistema correctamente.');
-    window.location.hash = '#observatorio';
+    window.location.hash = '#inicio';
   };
 
   // Quick search handler from header
@@ -196,9 +205,48 @@ export default function Home() {
   // Section render logic based on hash
   const renderCurrentSection = () => {
     switch (currentHash) {
-      case '#observatorio':
       case '#inicio':
       case '':
+        return (
+          <InicioLanding
+            currentUser={currentUser}
+            observatorioPublico={observatorioPublico}
+            onOpenLogin={() => setLoginModalOpen(true)}
+            onNavigateToObservatorio={() => (window.location.hash = '#observatorio')}
+            onNavigateToDocentes={() => (window.location.hash = '#docentes')}
+            onNavigateToEncuesta={() => (window.location.hash = '#encuesta')}
+          />
+        );
+
+      case '#observatorio':
+        if (!currentUser && !observatorioPublico) {
+          return (
+            <div className="card-white p-8 max-w-md mx-auto text-center space-y-4 my-8 shadow-sm">
+              <div className="w-12 h-12 bg-blue-50 text-[#0B4D94] rounded-2xl flex items-center justify-center mx-auto">
+                <BarChart3 className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-base text-slate-900">Observatorio Privado</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                El acceso a los indicadores estadísticos del Observatorio requiere inicio de sesión en el sistema.
+              </p>
+              <div className="pt-2 flex flex-col sm:flex-row gap-2 justify-center">
+                <button
+                  onClick={() => setLoginModalOpen(true)}
+                  className="bg-[#0B4D94] hover:bg-[#073262] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-sm transition-all"
+                >
+                  Iniciar Sesión
+                </button>
+                <button
+                  onClick={() => (window.location.hash = '#inicio')}
+                  className="text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl font-medium transition-all"
+                >
+                  Ir al Inicio
+                </button>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <Observatorio
             stats={stats}
@@ -212,6 +260,30 @@ export default function Home() {
         );
 
       case '#docentes':
+        if (!currentUser) {
+          return (
+            <div className="card-white p-8 max-w-md mx-auto text-center space-y-4 my-8 shadow-sm">
+              <h3 className="font-bold text-base text-slate-900">Directorio Institucional de Docentes</h3>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Para consultar el directorio de docentes y expedientes académicos debe identificarse en el sistema.
+              </p>
+              <div className="pt-2 flex flex-col sm:flex-row gap-2 justify-center">
+                <button
+                  onClick={() => setLoginModalOpen(true)}
+                  className="bg-[#0B4D94] hover:bg-[#073262] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-sm transition-all"
+                >
+                  Iniciar Sesión
+                </button>
+                <button
+                  onClick={() => (window.location.hash = '#inicio')}
+                  className="text-xs text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-4 py-2.5 rounded-xl font-medium transition-all"
+                >
+                  Ir al Inicio
+                </button>
+              </div>
+            </div>
+          );
+        }
         return (
           <DirectorioDocentes
             docentes={docentes}
@@ -353,14 +425,13 @@ export default function Home() {
 
       default:
         return (
-          <Observatorio
-            stats={stats}
-            docentes={docentes}
-            onSelectDocente={handleSelectDocente}
+          <InicioLanding
+            currentUser={currentUser}
+            observatorioPublico={observatorioPublico}
+            onOpenLogin={() => setLoginModalOpen(true)}
+            onNavigateToObservatorio={() => (window.location.hash = '#observatorio')}
+            onNavigateToDocentes={() => (window.location.hash = '#docentes')}
             onNavigateToEncuesta={() => (window.location.hash = '#encuesta')}
-            loading={loadingData}
-            error={loadError}
-            onRetry={loadData}
           />
         );
     }
@@ -378,6 +449,7 @@ export default function Home() {
         currentUser={currentUser}
         adminPermisos={adminPermisos}
         encuestadorPermisos={encuestadorPermisos}
+        observatorioPublico={observatorioPublico}
         onOpenLogin={() => setLoginModalOpen(true)}
         onLogout={handleLogout}
         onQuickSearch={handleQuickSearch}

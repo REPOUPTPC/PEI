@@ -18,10 +18,23 @@ import {
   Share2,
   Edit,
   Building,
+  Atom,
+  Presentation,
+  Compass,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Docente, ItemAcademico, ItemLibro, ItemArticulo, ItemDiplomado } from '@/lib/types';
+import {
+  Docente,
+  ItemAcademico,
+  ItemLibro,
+  ItemArticulo,
+  ItemDiplomado,
+  ItemTitulo,
+  ItemEvento,
+  ItemDesarrolloAcademico,
+  ItemTutoriaProyecto,
+} from '@/lib/types';
 
 interface DocenteFichaModalProps {
   docente: Docente | null;
@@ -43,6 +56,8 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
     }
   };
 
+  const titulos = parseJsonArray<ItemTitulo>(docente.titulos_adicionales);
+  const areasInteres = parseJsonArray<string>(docente.areas_interes_investigativo);
   const especialidades = parseJsonArray<ItemAcademico>(docente.especialidades);
   const maestrias = parseJsonArray<ItemAcademico>(docente.maestrias);
   const doctorados = parseJsonArray<ItemAcademico>(docente.doctorados);
@@ -50,6 +65,9 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
   const articulos = parseJsonArray<ItemArticulo>(docente.articulos_detalle);
   const diplomados = parseJsonArray<ItemDiplomado>(docente.diplomados_detalle);
   const pnfs = parseJsonArray<string>(docente.pnfs);
+  const eventos = parseJsonArray<ItemEvento>(docente.eventos_detalle);
+  const desarrollos = parseJsonArray<ItemDesarrolloAcademico>(docente.desarrollo_academico_detalle);
+  const tutorias = parseJsonArray<ItemTutoriaProyecto>(docente.tutorias_detalle);
 
   // Exportar Ficha a PDF con membrete oficial UPTPC
   const handleExportPDF = () => {
@@ -98,11 +116,22 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
 
     let currentY = (doc as any).lastAutoTable.finalY + 6;
 
-    // Formación Universitaria
-    const titulosBody = [
-      ['Pregrado:', `${docente.carrera_pregrado || 'N/D'} (${docente.universidad_pregrado || 'N/D'}${docente.anio_pregrado ? ` - ${docente.anio_pregrado}` : ''})`],
-      ['Rama Profesional:', docente.rama_especifica || docente.tipo_profesion || 'General'],
-    ];
+    // Formación Universitaria (Múltiples Títulos)
+    const titulosBody: [string, string][] = [];
+    if (titulos.length > 0) {
+      titulos.forEach((t, i) => {
+        titulosBody.push([
+          `Título ${i + 1} (${t.tipo_profesion || 'PREGRADO'}):`,
+          `${t.carrera} (${t.universidad || 'UPTPC'}${t.anio ? ` - ${t.anio}` : ''})${t.rama_especifica ? ` [${t.rama_especifica}]` : ''}`,
+        ]);
+      });
+    } else {
+      titulosBody.push([
+        'Pregrado:',
+        `${docente.carrera_pregrado || 'N/D'} (${docente.universidad_pregrado || 'N/D'}${docente.anio_pregrado ? ` - ${docente.anio_pregrado}` : ''})`,
+      ]);
+      titulosBody.push(['Rama Profesional:', docente.rama_especifica || docente.tipo_profesion || 'General']);
+    }
 
     if (doctorados.length > 0) {
       titulosBody.push(['Doctorado(s):', doctorados.map(d => `${d.titulo} (${d.universidad}${d.anio ? ` - ${d.anio}` : ''})`).join('; ')]);
@@ -116,7 +145,7 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
 
     autoTable(doc, {
       startY: currentY,
-      head: [['TRAYECTORIA ACADÉMICA Y TÍTULOS OBTENIDOS', '']],
+      head: [['FORMACIÓN ACADÉMICA Y TRAYECTORIA UNIVERSITARIA', '']],
       body: titulosBody,
       theme: 'striped',
       headStyles: { fillColor: [30, 64, 175], textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -145,8 +174,8 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
     currentY = (doc as any).lastAutoTable.finalY + 6;
 
     // Producción Intelectual y Científica
-    const prodBody = [
-      ['Línea de Investigación:', docente.linea_investigacion || 'No especificada'],
+    const prodBody: [string, string][] = [
+      ['Área de Interés Investigativo:', areasInteres.length > 0 ? areasInteres.join(' • ') : (docente.linea_investigacion || 'No especificada')],
       ['Investigación en Desarrollo:', docente.investigacion_en_desarrollo === 1 ? `SÍ: "${docente.investigacion_titulo || ''}" en ${docente.investigacion_instituto || 'UPTPC'}` : 'Sin investigación activa'],
     ];
 
@@ -156,19 +185,118 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
     if (articulos.length > 0) {
       prodBody.push(['Artículos en Revistas:', articulos.map(a => `"${a.titulo}" (${a.revista || ''}${a.anio ? ` - ${a.anio}` : ''})`).join('; ')]);
     }
-    if (docente.potencialidades) {
-      prodBody.push(['Potencialidades Profesionales:', docente.potencialidades]);
-    }
 
     autoTable(doc, {
       startY: currentY,
-      head: [['PRODUCCIÓN CIENTÍFICA, LÍNEAS DE INVESTIGACIÓN Y POTENCIALIDADES', '']],
+      head: [['ÁREAS DE INTERÉS INVESTIGATIVO Y PRODUCCIÓN CIENTÍFICA', '']],
       body: prodBody,
       theme: 'striped',
       headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255], fontStyle: 'bold' },
       styles: { fontSize: 8, cellPadding: 2 },
       columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
     });
+
+    currentY = (doc as any).lastAutoTable.finalY + 6;
+
+    // Congresos y Seminarios
+    const congresosBody: [string, string][] = [
+      ['Participación como Ponente:', docente.participado_ponente === 1 ? 'SÍ ha participado como Ponente' : 'NO'],
+      ['Participación como Asistente:', docente.participado_participante === 1 ? 'SÍ ha participado como Asistente' : 'NO'],
+    ];
+    if (eventos.length > 0) {
+      congresosBody.push([
+        'Eventos Registrados:',
+        eventos
+          .map(
+            ev =>
+              `• [${ev.tipo_evento} - ${ev.ambito}] "${ev.nombre_evento}" (${ev.rol}) - Org: ${ev.institucion || 'UPTPC'} (${ev.pais_ciudad || ''}, ${ev.fecha || ''})${
+                ev.titulo_ponencia ? ` | Ponencia: "${ev.titulo_ponencia}"` : ''
+              }`
+          )
+          .join('\n\n'),
+      ]);
+    }
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['PARTICIPACIÓN EN CONGRESOS Y SEMINARIOS CIENTÍFICOS', '']],
+      body: congresosBody,
+      theme: 'striped',
+      headStyles: { fillColor: [14, 116, 144], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 8, cellPadding: 2 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 6;
+
+    // Desarrollo Académico Actual y Tutoría de Proyectos
+    const devBody: [string, string][] = [
+      ['Desarrollo Académico Actual:', docente.desarrollo_academico_actual === 1 ? 'SÍ (Estudios en curso)' : 'NO'],
+    ];
+    if (desarrollos.length > 0) {
+      devBody.push([
+        'Programas en Desarrollo:',
+        desarrollos
+          .map(
+            d =>
+              `• ${d.tipo}: ${d.area} en ${d.institucion} [${d.estado}]${
+                d.fecha_estimada ? ` (Estimado: ${d.fecha_estimada})` : ''
+              }`
+          )
+          .join('\n'),
+      ]);
+    }
+    devBody.push([
+      'Tutoría de Proyectos:',
+      docente.tutoria_proyectos_activa === 1 ? 'SÍ (Tutorías activas)' : 'NO',
+    ]);
+    if (tutorias.length > 0) {
+      devBody.push([
+        'Proyectos en Tutoría:',
+        tutorias
+          .map(
+            t =>
+              `• "${t.nombre_proyecto}" (${t.tipo_proyecto}, ${t.nivel || ''}) - Rol: ${t.rol} [${t.estado}]`
+          )
+          .join('\n'),
+      ]);
+    }
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['DESARROLLO ACADÉMICO ACTUAL Y TUTORÍA DE PROYECTOS', '']],
+      body: devBody,
+      theme: 'striped',
+      headStyles: { fillColor: [124, 58, 237], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 8, cellPadding: 2 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 6;
+
+    // Potencialidades y Diplomados
+    const potBody: [string, string][] = [];
+    if (diplomados.length > 0) {
+      potBody.push([
+        'Diplomados Realizados:',
+        diplomados.map(d => `• ${d.area} (${d.institucion}${d.anio ? ` - ${d.anio}` : ''}${d.horas ? `, ${d.horas} hrs` : ''})`).join('\n'),
+      ]);
+    }
+    if (docente.potencialidades) {
+      potBody.push(['Potencialidades Profesionales:', docente.potencialidades]);
+    }
+
+    if (potBody.length > 0) {
+      autoTable(doc, {
+        startY: currentY,
+        head: [['POTENCIALIDADES PROFESIONALES Y DIPLOMADOS', '']],
+        body: potBody,
+        theme: 'striped',
+        headStyles: { fillColor: [217, 119, 6], textColor: [255, 255, 255], fontStyle: 'bold' },
+        styles: { fontSize: 8, cellPadding: 2 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 60 } },
+      });
+    }
 
     // Footer
     const pageCount = (doc as any).internal.getNumberOfPages();
@@ -328,30 +456,58 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
 
           {/* Grid de Secciones Detalladas */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Columna 1: Formación Académica */}
+            {/* Columna 1: Formación Académica, Ubicación y Gremio */}
             <div className="space-y-4">
+              {/* Formación Académica */}
               <div className="border border-slate-200 rounded-xl p-4 bg-white">
                 <h4 className="font-bold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mb-3">
                   <GraduationCap className="w-4 h-4 text-[#0B4D94]" />
-                  <span>Títulos Universitarios Obtenidos</span>
+                  <span>Formación Académica y Títulos</span>
                 </h4>
 
                 <div className="space-y-3 text-xs">
-                  {/* Pregrado */}
-                  <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100">
-                    <p className="font-bold text-slate-800 text-xs">
-                      {docente.carrera_pregrado || 'Pregrado registrado'}
-                    </p>
-                    <p className="text-slate-500 text-[11px]">
-                      {docente.universidad_pregrado || 'Universidad no especificada'}
-                      {docente.anio_pregrado ? ` • Año ${docente.anio_pregrado}` : ''}
-                    </p>
-                    {docente.rama_especifica && (
-                      <span className="inline-block mt-1 text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded">
-                        Rama: {docente.rama_especifica}
-                      </span>
-                    )}
-                  </div>
+                  {/* Múltiples Títulos Dinámicos */}
+                  {titulos.length > 0 ? (
+                    titulos.map((t, i) => (
+                      <div key={i} className="p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <p className="font-bold text-slate-800 text-xs">
+                            {t.carrera || 'Carrera Universitaria'}
+                          </p>
+                          {t.tipo_profesion && (
+                            <span className="text-[10px] font-bold text-[#0B4D94] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                              {t.tipo_profesion}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-slate-500 text-[11px]">
+                          {t.universidad || 'UPTPC'}
+                          {t.anio ? ` • Año ${t.anio}` : ''}
+                        </p>
+                        {t.rama_especifica && (
+                          <span className="inline-block mt-1 text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded">
+                            Rama: {t.rama_especifica}
+                          </span>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    /* Fallback título pregrado singular */
+                    <div className="p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                      <p className="font-bold text-slate-800 text-xs">
+                        {docente.carrera_pregrado || 'Pregrado registrado'}
+                      </p>
+                      <p className="text-slate-500 text-[11px]">
+                        {docente.universidad_pregrado || 'Universidad no especificada'}
+                        {docente.anio_pregrado ? ` • Año ${docente.anio_pregrado}` : ''}
+                      </p>
+                      {docente.rama_especifica && (
+                        <span className="inline-block mt-1 text-[10px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded">
+                          Rama: {docente.rama_especifica}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* Doctorados */}
                   {doctorados.map((d, i) => (
@@ -382,6 +538,61 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
                       </p>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Congresos y Seminarios Científicos */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-white">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mb-3">
+                  <Presentation className="w-4 h-4 text-cyan-700" />
+                  <span>Congresos y Seminarios Científicos</span>
+                </h4>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${
+                      docente.participado_ponente === 1
+                        ? 'bg-blue-50 text-[#0B4D94] border-blue-200'
+                        : 'bg-slate-50 text-slate-500 border-slate-200'
+                    }`}>
+                      Ponente: {docente.participado_ponente === 1 ? 'SÍ' : 'NO'}
+                    </span>
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${
+                      docente.participado_participante === 1
+                        ? 'bg-blue-50 text-[#0B4D94] border-blue-200'
+                        : 'bg-slate-50 text-slate-500 border-slate-200'
+                    }`}>
+                      Participante: {docente.participado_participante === 1 ? 'SÍ' : 'NO'}
+                    </span>
+                  </div>
+
+                  {eventos.length > 0 ? (
+                    <div className="space-y-2">
+                      {eventos.map((ev, i) => (
+                        <div key={i} className="p-2.5 bg-slate-50 rounded-lg border border-slate-100 space-y-1">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="font-bold text-[#0B4D94] bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                              {ev.tipo_evento} • {ev.ambito}
+                            </span>
+                            <span className="font-semibold text-slate-600 bg-slate-200 px-1.5 py-0.5 rounded">
+                              {ev.rol}
+                            </span>
+                          </div>
+                          <p className="font-bold text-slate-800 text-xs">{ev.nombre_evento}</p>
+                          <p className="text-[11px] text-slate-500">
+                            {ev.institucion} {ev.pais_ciudad ? `(${ev.pais_ciudad})` : ''} {ev.fecha ? `• ${ev.fecha}` : ''}
+                          </p>
+                          {ev.titulo_ponencia && (
+                            <p className="text-[11px] text-[#0B4D94] italic bg-blue-50/50 p-1 rounded border border-blue-100">
+                              Ponencia: &ldquo;{ev.titulo_ponencia}&rdquo;
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 text-xs italic">Sin eventos registrados.</p>
+                  )}
                 </div>
               </div>
 
@@ -422,21 +633,39 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
               </div>
             </div>
 
-            {/* Columna 2: Investigación, Potencialidades y Gremio */}
+            {/* Columna 2: Investigación, Desarrollo Académico, Tutorías y Potencialidades */}
             <div className="space-y-4">
-              {/* Investigación y Producción Intelectual */}
+              {/* Investigación y Áreas de Interés */}
               <div className="border border-slate-200 rounded-xl p-4 bg-white">
                 <h4 className="font-bold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mb-3">
                   <BookOpen className="w-4 h-4 text-emerald-600" />
-                  <span>Investigación y Producción Intelectual</span>
+                  <span>Investigación y Publicaciones Científicas</span>
                 </h4>
 
                 <div className="space-y-3 text-xs">
-                  {docente.linea_investigacion && (
+                  {/* Áreas de Interés Investigativo */}
+                  {areasInteres.length > 0 ? (
                     <div>
-                      <p className="font-semibold text-slate-500 text-[11px]">Línea de Investigación:</p>
-                      <p className="font-bold text-slate-900">{docente.linea_investigacion}</p>
+                      <p className="font-semibold text-slate-500 text-[11px] mb-1.5">ÁREA DE INTERÉS INVESTIGATIVO:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {areasInteres.map(area => (
+                          <span
+                            key={area}
+                            className="inline-flex items-center gap-1 bg-blue-50 text-[#0B4D94] border border-blue-200 text-[11px] font-medium px-2 py-0.5 rounded-md"
+                          >
+                            <Atom className="w-3 h-3 text-[#0B4D94]" />
+                            <span>{area}</span>
+                          </span>
+                        ))}
+                      </div>
                     </div>
+                  ) : (
+                    docente.linea_investigacion && (
+                      <div>
+                        <p className="font-semibold text-slate-500 text-[11px]">Línea de Investigación:</p>
+                        <p className="font-bold text-slate-900">{docente.linea_investigacion}</p>
+                      </div>
+                    )
                   )}
 
                   {docente.investigacion_en_desarrollo === 1 && (
@@ -480,6 +709,77 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
                       ))}
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Desarrollo Académico Actual y Tutorías */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-white">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mb-3">
+                  <Compass className="w-4 h-4 text-purple-600" />
+                  <span>Desarrollo Académico y Tutorías</span>
+                </h4>
+
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="font-bold text-slate-700 text-xs">Estudios en Curso:</p>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        docente.desarrollo_academico_actual === 1 ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {docente.desarrollo_academico_actual === 1 ? 'Activo' : 'No reporta'}
+                      </span>
+                    </div>
+                    {desarrollos.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {desarrollos.map((dev, i) => (
+                          <div key={i} className="p-2 bg-purple-50/40 rounded border border-purple-100">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-purple-950 text-xs">{dev.tipo}</span>
+                              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+                                {dev.estado}
+                              </span>
+                            </div>
+                            <p className="text-slate-700 text-[11px] font-medium mt-0.5">{dev.area}</p>
+                            <p className="text-slate-500 text-[10px]">
+                              {dev.institucion} {dev.fecha_estimada ? `• Culminación: ${dev.fecha_estimada}` : ''}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-slate-400 text-[11px] italic">Sin programas en desarrollo registrados.</p>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="font-bold text-slate-700 text-xs">Tutoría de Proyectos:</p>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        docente.tutoria_proyectos_activa === 1 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {docente.tutoria_proyectos_activa === 1 ? 'Tutorando' : 'No reporta'}
+                      </span>
+                    </div>
+                    {tutorias.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {tutorias.map((tut, i) => (
+                          <div key={i} className="p-2 bg-slate-50 rounded border border-slate-200">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-slate-800 text-xs">{tut.nombre_proyecto}</span>
+                              <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1 rounded">
+                                {tut.rol}
+                              </span>
+                            </div>
+                            <p className="text-slate-500 text-[10px] mt-0.5">
+                              {tut.tipo_proyecto} {tut.nivel ? `• ${tut.nivel}` : ''} • Estado: {tut.estado}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-slate-400 text-[11px] italic">Sin proyectos en tutoría registrados.</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
