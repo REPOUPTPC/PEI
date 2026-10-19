@@ -58,7 +58,8 @@ export const DirectorioDocentes: React.FC<DirectorioDocentesProps> = ({
       const matchCar = (d.carrera_pregrado || '').toLowerCase().includes(q);
       const matchCarg = (d.cargo || '').toLowerCase().includes(q);
       const matchLin = (d.linea_investigacion || '').toLowerCase().includes(q);
-      if (!matchCed && !matchNom && !matchCar && !matchCarg && !matchLin) return false;
+      const matchAsig = (d.asignaturas_imparte || '').toLowerCase().includes(q);
+      if (!matchCed && !matchNom && !matchCar && !matchCarg && !matchLin && !matchAsig) return false;
     }
 
     // Filter Censo Status

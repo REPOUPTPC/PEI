@@ -1,0 +1,1274 @@
+[
+  {
+    "nombre": "ACTIVIDAD FÍSICA Y SALUD",
+    "norm": "ACTIVIDADFISICAYSALUD",
+    "ejemploCodigo": "T1ANC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "ACTIVIDADES ACREDITABLES I (DEPORTES)",
+    "norm": "ACTIVIDADESACREDITABLESIDEPORTES",
+    "ejemploCodigo": "I1AMC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "ACTIVIDADES ACREDITABLES II",
+    "norm": "ACTIVIDADESACREDITABLESII",
+    "ejemploCodigo": "I1AXC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "ACTIVIDADES ACREDITABLES III",
+    "norm": "ACTIVIDADESACREDITABLESIII",
+    "ejemploCodigo": "I1BLC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "ACTIVIDADES ACREDITABLES IV",
+    "norm": "ACTIVIDADESACREDITABLESIV",
+    "ejemploCodigo": "I1BXC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "ACTIVIDADES ACREDITABLES PENDIENTES",
+    "norm": "ACTIVIDADESACREDITABLESPENDIENTES",
+    "ejemploCodigo": "E1BFC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "ADMINISTRACIÓN DE BASES DE DATOS",
+    "norm": "ADMINISTRACIONDEBASESDEDATOS",
+    "ejemploCodigo": "I1BVC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "ADMINISTRACIÓN DEL MANTENIMIENTO",
+    "norm": "ADMINISTRACIONDELMANTENIMIENTO",
+    "ejemploCodigo": "T1BJC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "ALGEBRA LÍNEAL Y GEOMETRÍA",
+    "norm": "ALGEBRALINEALYGEOMETRIA",
+    "ejemploCodigo": "M0AXC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "ALGORÍTMICA Y PROGRAMACIÓN I",
+    "norm": "ALGORITMICAYPROGRAMACIONI",
+    "ejemploCodigo": "I1AGC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "ANÁLISIS DE ALTERNATIVAS ECONÓMICAS",
+    "norm": "ANALISISDEALTERNATIVASECONOMICAS",
+    "ejemploCodigo": "T1BUC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "ANÁLISIS DE FALLAS DE MATERIALES",
+    "norm": "ANALISISDEFALLASDEMATERIALES",
+    "ejemploCodigo": "E1BWC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "ANÁLISIS MATEMÁTICO",
+    "norm": "ANALISISMATEMATICO",
+    "ejemploCodigo": "TRAFC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "ANÁLISIS MATEMÁTICO I",
+    "norm": "ANALISISMATEMATICOI",
+    "ejemploCodigo": "T1AFC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "ANÁLISIS MATEMÁTICO II",
+    "norm": "ANALISISMATEMATICOII",
+    "ejemploCodigo": "T2AFC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "ANÁLISIS MATEMÁTICO III",
+    "norm": "ANALISISMATEMATICOIII",
+    "ejemploCodigo": "T3AFC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "ARQUITECTURA DEL COMPUTADOR",
+    "norm": "ARQUITECTURADELCOMPUTADOR",
+    "ejemploCodigo": "I1AEC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "ARTE Y CULTURA",
+    "norm": "ARTEYCULTURA",
+    "ejemploCodigo": "T1BDC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "AUDITORÍA INFORMÁTICA",
+    "norm": "AUDITORIAINFORMATICA",
+    "ejemploCodigo": "I1BPC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "AUTOMATIZACIÓN DE LA GESTIÓN ADMINISTRATIVA DEL MANTENIMIENTO",
+    "norm": "AUTOMATIZACIONDELAGESTIONADMINISTRATIVADELMANTENIMIENTO",
+    "ejemploCodigo": "T1BWC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "BASE DE DATOS",
+    "norm": "BASEDEDATOS",
+    "ejemploCodigo": "I1AWC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "CÁLCULO APLICADO",
+    "norm": "CALCULOAPLICADO",
+    "ejemploCodigo": "M1AJC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "CALDERAS",
+    "norm": "CALDERAS",
+    "ejemploCodigo": "R1BOC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "CALIDAD",
+    "norm": "CALIDAD",
+    "ejemploCodigo": "M1AQC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "CIENCIA DE LOS MATERIALES",
+    "norm": "CIENCIADELOSMATERIALES",
+    "ejemploCodigo": "E1AGC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "CIENCIA, TECNOLOGÍA Y SOCIEDAD",
+    "norm": "CIENCIATECNOLOGIAYSOCIEDAD",
+    "ejemploCodigo": "M1BJC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "COMERCIO INTERNACIONAL",
+    "norm": "COMERCIOINTERNACIONAL",
+    "ejemploCodigo": "C1BCC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "COMPORTAMIENTO MECÁNICO DE LOS MATERIALES",
+    "norm": "COMPORTAMIENTOMECANICODELOSMATERIALES",
+    "ejemploCodigo": "E1BGC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "COMPUTACIÓN I",
+    "norm": "COMPUTACIONI",
+    "ejemploCodigo": "R1BIC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "COMPUTACIÓN II",
+    "norm": "COMPUTACIONII",
+    "ejemploCodigo": "R1BPC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "COMUNITARIA Y AMBIENTE",
+    "norm": "COMUNITARIAYAMBIENTE",
+    "ejemploCodigo": "T1AXC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "CONFIABILIDAD APLICADA AL MANTENIMIENTO",
+    "norm": "CONFIABILIDADAPLICADAALMANTENIMIENTO",
+    "ejemploCodigo": "T1BYC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "CONTABILIDAD GENERAL",
+    "norm": "CONTABILIDADGENERAL",
+    "ejemploCodigo": "C1AWC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "CONTROL DE LA CALIDAD",
+    "norm": "CONTROLDELACALIDAD",
+    "ejemploCodigo": "E1AZC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "CONTROL DE PRODUCCIÓN",
+    "norm": "CONTROLDEPRODUCCION",
+    "ejemploCodigo": "E1AQC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "CONTROL E INSTRUMENTACIÓN",
+    "norm": "CONTROLEINSTRUMENTACION",
+    "ejemploCodigo": "R1BSC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "CORROSIÓN",
+    "norm": "CORROSION",
+    "ejemploCodigo": "E1ATC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "CORROSIÓN APLICADA",
+    "norm": "CORROSIONAPLICADA",
+    "ejemploCodigo": "R1BGC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "DEGRADACIÓN DE MATERIALES",
+    "norm": "DEGRADACIONDEMATERIALES",
+    "ejemploCodigo": "E1BQC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "DEPORTE (REQUISITO DE EGRESO)",
+    "norm": "DEPORTEREQUISITODEEGRESO",
+    "ejemploCodigo": "E1AXC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "DEPORTE, ARTE, CULTURA Y RECREACIÓN I",
+    "norm": "DEPORTEARTECULTURAYRECREACIONI",
+    "ejemploCodigo": "C1AIC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "DEPORTE, ARTE, CULTURA Y RECREACIÓN II",
+    "norm": "DEPORTEARTECULTURAYRECREACIONII",
+    "ejemploCodigo": "C1BBC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "DESARROLLO DE LAS HABILIDADES DEL PENSAMIENTO",
+    "norm": "DESARROLLODELASHABILIDADESDELPENSAMIENTO",
+    "ejemploCodigo": "R1AZC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "DESARROLLO ORGANIZACIONAL",
+    "norm": "DESARROLLOORGANIZACIONAL",
+    "ejemploCodigo": "T1BXC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "DIBUJO",
+    "norm": "DIBUJO",
+    "ejemploCodigo": "E1ANC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "DIBUJO I",
+    "norm": "DIBUJOI",
+    "ejemploCodigo": "T1AHC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "DIBUJO II",
+    "norm": "DIBUJOII",
+    "ejemploCodigo": "T2AHC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "DIBUJO MECÁNICO",
+    "norm": "DIBUJOMECANICO",
+    "ejemploCodigo": "M1AFC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "DIMENSIÓN UNIVERSAL DEL SER HUMANO",
+    "norm": "DIMENSIONUNIVERSALDELSERHUMANO",
+    "ejemploCodigo": "M1ANC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "DISEÑO DE ELEMENTOS DE MÁQUINAS",
+    "norm": "DISENODEELEMENTOSDEMAQUINAS",
+    "ejemploCodigo": "M1AOC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "DISEÑO DE MÁQUINAS",
+    "norm": "DISENODEMAQUINAS",
+    "ejemploCodigo": "M1BBC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "DISEÑO Y SELECCIÓN DE MATERIALES",
+    "norm": "DISENOYSELECCIONDEMATERIALES",
+    "ejemploCodigo": "E1CFC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "EDUCACIÓN AMBIENTAL",
+    "norm": "EDUCACIONAMBIENTAL",
+    "ejemploCodigo": "E1AHC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "ELECTIVA 1",
+    "norm": "ELECTIVA1",
+    "ejemploCodigo": "M1BKC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "ELECTIVA 2",
+    "norm": "ELECTIVA2",
+    "ejemploCodigo": "M1BNC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "ELECTIVA I (HTML)",
+    "norm": "ELECTIVAIHTML",
+    "ejemploCodigo": "I1AIC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "ELECTIVA II (SISTEMA DE INFORMACIÓN)",
+    "norm": "ELECTIVAIISISTEMADEINFORMACION",
+    "ejemploCodigo": "I1ATC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "ELECTIVA III (SISTEMA DE INFORMACIÓN)",
+    "norm": "ELECTIVAIIISISTEMADEINFORMACION",
+    "ejemploCodigo": "I1BHC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "ELECTIVA IV",
+    "norm": "ELECTIVAIV",
+    "ejemploCodigo": "I1BSC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "ELECTROTECNIA",
+    "norm": "ELECTROTECNIA",
+    "ejemploCodigo": "R1BHC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "ELEGIBLES 1",
+    "norm": "ELEGIBLES1",
+    "ejemploCodigo": "E1CAC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "ELEGIBLES 2",
+    "norm": "ELEGIBLES2",
+    "ejemploCodigo": "E1CBC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "ELEGIBLES 3",
+    "norm": "ELEGIBLES3",
+    "ejemploCodigo": "E1CCC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "ELEMENTOS DE MÁQUINA",
+    "norm": "ELEMENTOSDEMAQUINA",
+    "ejemploCodigo": "T1AZC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "ENSAYO E INSPECCIÓN DE MATERIALES",
+    "norm": "ENSAYOEINSPECCIONDEMATERIALES",
+    "ejemploCodigo": "E1BBC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "ESTADÍSTICA",
+    "norm": "ESTADISTICA",
+    "ejemploCodigo": "C1AOC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "ESTADÍSTICA APLICADA",
+    "norm": "ESTADISTICAAPLICADA",
+    "ejemploCodigo": "M0AYC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "ESTADÍSTICA APLICADA AL MANTENIMIENTO",
+    "norm": "ESTADISTICAAPLICADAALMANTENIMIENTO",
+    "ejemploCodigo": "T1BQC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "ESTRUCTURA DE MATERIALES/ FUNDAMENTOS DE QUÍMICA ORGÁNICA",
+    "norm": "ESTRUCTURADEMATERIALESFUNDAMENTOSDEQUIMICAORGANICA",
+    "ejemploCodigo": "E1BJC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "EVALUACIÓN DE COSTOS INDUSTRIALES",
+    "norm": "EVALUACIONDECOSTOSINDUSTRIALES",
+    "ejemploCodigo": "R1BMC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "FINANZAS PÚBLICAS",
+    "norm": "FINANZASPUBLICAS",
+    "ejemploCodigo": "C1AXC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "FINANZAS PÚBLICAS MUNICIPALES Y PRESUPUESTO",
+    "norm": "FINANZASPUBLICASMUNICIPALESYPRESUPUESTO",
+    "ejemploCodigo": "C1AYC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "FÍSICA",
+    "norm": "FISICA",
+    "ejemploCodigo": "E1AKC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "FÍSICO-QUÍMICA DE LOS MATERIALES",
+    "norm": "FISICOQUIMICADELOSMATERIALES",
+    "ejemploCodigo": "E1BHC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "FORMACIÓN CRÍTICA I",
+    "norm": "FORMACIONCRITICAI",
+    "ejemploCodigo": "I1AFC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "FORMACIÓN CRÍTICA II",
+    "norm": "FORMACIONCRITICAII",
+    "ejemploCodigo": "I1APC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "FORMACIÓN CRÍTICA III",
+    "norm": "FORMACIONCRITICAIII",
+    "ejemploCodigo": "I1BEC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "FORMACIÓN CRÍTICA IV",
+    "norm": "FORMACIONCRITICAIV",
+    "ejemploCodigo": "I1BNC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "FORMACIÓN SOCIO CRÍTICA",
+    "norm": "FORMACIONSOCIOCRITICA",
+    "ejemploCodigo": "T1AKC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "FORMACIÓN SOCIO CRÍTICA I",
+    "norm": "FORMACIONSOCIOCRITICAI",
+    "ejemploCodigo": "C1AJC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "FORMACIÓN SOCIO CRÍTICA II",
+    "norm": "FORMACIONSOCIOCRITICAII",
+    "ejemploCodigo": "C1ATC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "FORMACIÓN SOCIO CRÍTICA III",
+    "norm": "FORMACIONSOCIOCRITICAIII",
+    "ejemploCodigo": "E1BLC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "FORMACIÓN SOCIO CRÍTICA IV",
+    "norm": "FORMACIONSOCIOCRITICAIV",
+    "ejemploCodigo": "E1CDC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "FUNDAMENTOS A LA CONTABILIDAD",
+    "norm": "FUNDAMENTOSALACONTABILIDAD",
+    "ejemploCodigo": "C1AGC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "FUNDAMENTOS A LAS CIENCIAS FISCALES",
+    "norm": "FUNDAMENTOSALASCIENCIASFISCALES",
+    "ejemploCodigo": "C1AHC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "FUNDAMENTOS AL DERECHO ADMINISTRATIVO",
+    "norm": "FUNDAMENTOSALDERECHOADMINISTRATIVO",
+    "ejemploCodigo": "C1AMC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "FUNDAMENTOS AL DERECHO CONSTITUCIONAL",
+    "norm": "FUNDAMENTOSALDERECHOCONSTITUCIONAL",
+    "ejemploCodigo": "C1ALC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "FUNDAMENTOS DE ADMINISTRACIÓN",
+    "norm": "FUNDAMENTOSDEADMINISTRACION",
+    "ejemploCodigo": "C1AQC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "FUNDAMENTOS DE ECONOMÍA",
+    "norm": "FUNDAMENTOSDEECONOMIA",
+    "ejemploCodigo": "C1ARC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "FUNDAMENTOS ELÉCTRICOS",
+    "norm": "FUNDAMENTOSELECTRICOS",
+    "ejemploCodigo": "M1AMC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "FUNDAMENTOS LEGALES PARA EL MANTENIMIENTO",
+    "norm": "FUNDAMENTOSLEGALESPARAELMANTENIMIENTO",
+    "ejemploCodigo": "T1BLC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "FUNDICIÓN",
+    "norm": "FUNDICION",
+    "ejemploCodigo": "E1BCC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "GESTIÓN AMBIENTAL",
+    "norm": "GESTIONAMBIENTAL",
+    "ejemploCodigo": "T1CGC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "GESTIÓN DE MANTENIMIENTO",
+    "norm": "GESTIONDEMANTENIMIENTO",
+    "ejemploCodigo": "T1CJC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "GESTIÓN DE PRODUCCIÓN Y DE LA CALIDAD",
+    "norm": "GESTIONDEPRODUCCIONYDELACALIDAD",
+    "ejemploCodigo": "E1BKC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "GESTIÓN DE PROYECTOS INFORMÁTICOS",
+    "norm": "GESTIONDEPROYECTOSINFORMATICOS",
+    "ejemploCodigo": "I1BRC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "GESTIÓN DE SEGURIDAD Y SALUD OCUPACIONAL",
+    "norm": "GESTIONDESEGURIDADYSALUDOCUPACIONAL",
+    "ejemploCodigo": "E1BVC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "GESTIÓN DEL TALENTO HUMANO",
+    "norm": "GESTIONDELTALENTOHUMANO",
+    "ejemploCodigo": "E1BTC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "GESTIÓN TECNOLÓGICA",
+    "norm": "GESTIONTECNOLOGICA",
+    "ejemploCodigo": "T1CLC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "HIGIENE Y SEGURIDAD INDUSTRIAL",
+    "norm": "HIGIENEYSEGURIDADINDUSTRIAL",
+    "ejemploCodigo": "E1AMC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "IDIOMAS (INGLÉS)",
+    "norm": "IDIOMASINGLES",
+    "ejemploCodigo": "I1ALC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "INGENIERÍA CERAMICA/METALÚRGICA",
+    "norm": "INGENIERIACERAMICAMETALURGICA",
+    "ejemploCodigo": "E1BSC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "INGENIERÍA DE POLÍMEROS",
+    "norm": "INGENIERIADEPOLIMEROS",
+    "ejemploCodigo": "E1BUC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "INGENIERÍA DEL SOFTWARE I",
+    "norm": "INGENIERIADELSOFTWAREI",
+    "ejemploCodigo": "I1ASC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "INGENIERÍA DEL SOFTWARE II",
+    "norm": "INGENIERIADELSOFTWAREII",
+    "ejemploCodigo": "I1BGC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "INGENIERÍA Y SOCIEDAD",
+    "norm": "INGENIERIAYSOCIEDAD",
+    "ejemploCodigo": "T0CPC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "INGLÉS",
+    "norm": "INGLES",
+    "ejemploCodigo": "C1APC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "INGLÉS (ACTIVIDAD ACREDITABLE)",
+    "norm": "INGLESACTIVIDADACREDITABLE",
+    "ejemploCodigo": "EEAUC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "INGLÉS I (ACTIVIDAD ACREDITABLE)",
+    "norm": "INGLESIACTIVIDADACREDITABLE",
+    "ejemploCodigo": "E1AOC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "INGLÉS II (ACTIVIDAD ACREDITABLE)",
+    "norm": "INGLESIIACTIVIDADACREDITABLE",
+    "ejemploCodigo": "E1AUC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "INGLÉS III (ACTIVIDAD ACREDITABLE)",
+    "norm": "INGLESIIIACTIVIDADACREDITABLE",
+    "ejemploCodigo": "E2AUC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "INGLÉS TÉCNICO II",
+    "norm": "INGLESTECNICOII",
+    "ejemploCodigo": "R1AYC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "INSPECCIÓN Y DIAGNOSTICO EN EL MANTENIMIENTO",
+    "norm": "INSPECCIONYDIAGNOSTICOENELMANTENIMIENTO",
+    "ejemploCodigo": "T1CAC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "INSTALACIONES ELÉCTRICAS",
+    "norm": "INSTALACIONESELECTRICAS",
+    "ejemploCodigo": "M1BDC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "INSTRUMENTACIÓN Y CONTROL",
+    "norm": "INSTRUMENTACIONYCONTROL",
+    "ejemploCodigo": "EEBNC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "INSTRUMENTACIÓN Y CONTROL INDUSTRIAL",
+    "norm": "INSTRUMENTACIONYCONTROLINDUSTRIAL",
+    "ejemploCodigo": "E1BNC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "INTRODUCCIÓN A LA CIENCIA Y TECNOLOGÍA",
+    "norm": "INTRODUCCIONALACIENCIAYTECNOLOGIA",
+    "ejemploCodigo": "T0CRC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "INTRODUCCIÓN A LAS CIENCIAS FISCALES",
+    "norm": "INTRODUCCIONALASCIENCIASFISCALES",
+    "ejemploCodigo": "C0AEC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "INTRODUCCIÓN A LOS FUNDAMENTOS DE CIENCIAS FISCALES",
+    "norm": "INTRODUCCIONALOSFUNDAMENTOSDECIENCIASFISCALES",
+    "ejemploCodigo": "CEAEC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "INTRODUCCIÓN A LOS PROYECTOS Y AL PNF",
+    "norm": "INTRODUCCIONALOSPROYECTOSYALPNF",
+    "ejemploCodigo": "E0ACC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "INTRODUCCIÓN A LOS PST",
+    "norm": "INTRODUCCIONALOSPST",
+    "ejemploCodigo": "E0CRC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "INTRODUCCIÓN AL MANTENIMIENTO",
+    "norm": "INTRODUCCIONALMANTENIMIENTO",
+    "ejemploCodigo": "T1ALC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "INTRODUCCIÓN AL PNF",
+    "norm": "INTRODUCCIONALPNF",
+    "ejemploCodigo": "E0CQC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "INTRODUCCIÓN AL PROYECTO",
+    "norm": "INTRODUCCIONALPROYECTO",
+    "ejemploCodigo": "R1RXC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "INVESTIGACIÓN DE OPERACIONES",
+    "norm": "INVESTIGACIONDEOPERACIONES",
+    "ejemploCodigo": "I1BBC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "LA UNIVERSIDAD POLITÉCNICA",
+    "norm": "LAUNIVERSIDADPOLITECNICA",
+    "ejemploCodigo": "M0AAC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "LEGISLACIÓN ADUANERA",
+    "norm": "LEGISLACIONADUANERA",
+    "ejemploCodigo": "C1AUC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "LOGÍSTICA DE MANTENIMIENTO",
+    "norm": "LOGISTICADEMANTENIMIENTO",
+    "ejemploCodigo": "T1CFC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "MANEJO DE LAS TIC",
+    "norm": "MANEJODELASTIC",
+    "ejemploCodigo": "C1BAC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "MANTENIMIENTO",
+    "norm": "MANTENIMIENTO",
+    "ejemploCodigo": "M1ARC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "MANTENIMIENTO INDUSTRIAL",
+    "norm": "MANTENIMIENTOINDUSTRIAL",
+    "ejemploCodigo": "E1CKC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "MÁQUINAS HIDRÁULICAS",
+    "norm": "MAQUINASHIDRAULICAS",
+    "ejemploCodigo": "M1AUC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "MÁQUINAS TÉRMICAS",
+    "norm": "MAQUINASTERMICAS",
+    "ejemploCodigo": "M1BHC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "MÁQUINAS Y HERRAMIENTAS",
+    "norm": "MAQUINASYHERRAMIENTAS",
+    "ejemploCodigo": "R1BDC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "MATEMÁTICA",
+    "norm": "MATEMATICA",
+    "ejemploCodigo": "C0ABC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "MATEMÁTICA APLICADA",
+    "norm": "MATEMATICAAPLICADA",
+    "ejemploCodigo": "I1BCC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "MATEMÁTICA APLICADA AL MANTENIMIENTO",
+    "norm": "MATEMATICAAPLICADAALMANTENIMIENTO",
+    "ejemploCodigo": "T1BKC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "MATEMATICA FINANCIERA",
+    "norm": "MATEMATICAFINANCIERA",
+    "ejemploCodigo": "C1ANC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "MATEMÁTICA I",
+    "norm": "MATEMATICAI",
+    "ejemploCodigo": "E0AAC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "MATEMÁTICA II",
+    "norm": "MATEMATICAII",
+    "ejemploCodigo": "E1AEC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "MATEMÁTICA III",
+    "norm": "MATEMATICAIII",
+    "ejemploCodigo": "E1BIC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "MATEMÁTICAS",
+    "norm": "MATEMATICAS",
+    "ejemploCodigo": "T0AAC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "MATEMÁTICAS PARA INGENIERÍA",
+    "norm": "MATEMATICASPARAINGENIERIA",
+    "ejemploCodigo": "M1BCC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "MATERIALES COMPUESTOS Y AVANZADOS",
+    "norm": "MATERIALESCOMPUESTOSYAVANZADOS",
+    "ejemploCodigo": "E1BYC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "MATERIALES I",
+    "norm": "MATERIALESI",
+    "ejemploCodigo": "R1AWC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "MATERIALES Y SUS PROPIEDADES",
+    "norm": "MATERIALESYSUSPROPIEDADES",
+    "ejemploCodigo": "E1BOC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "MECÁNICA APLICADA",
+    "norm": "MECANICAAPLICADA",
+    "ejemploCodigo": "T1AQC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "MECÁNICA APLICADA I",
+    "norm": "MECANICAAPLICADAI",
+    "ejemploCodigo": "M1AKC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "MECÁNICA APLICADA II",
+    "norm": "MECANICAAPLICADAII",
+    "ejemploCodigo": "M1APC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "MECÁNICA DE LOS FLUIDOS",
+    "norm": "MECANICADELOSFLUIDOS",
+    "ejemploCodigo": "R1BBC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "MODELADO DE BASE DE DATOS",
+    "norm": "MODELADODEBASEDEDATOS",
+    "ejemploCodigo": "I1BKC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "MÓDULO DE SALUD INTEGRAL",
+    "norm": "MODULODESALUDINTEGRAL",
+    "ejemploCodigo": "C0ADC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "MOTORES DE COMBUSTIÓN INTERNA",
+    "norm": "MOTORESDECOMBUSTIONINTERNA",
+    "ejemploCodigo": "R1BXC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "ORGANIZACIÓN MÉTODOS Y SISTEMAS ADMINISTRATIVOS AL MANTENIMIENTO",
+    "norm": "ORGANIZACIONMETODOSYSISTEMASADMINISTRATIVOSALMANTENIMIENTO",
+    "ejemploCodigo": "T1COC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "PASANTÍA MECÁNICA TÉRMICA",
+    "norm": "PASANTIAMECANICATERMICA",
+    "ejemploCodigo": "R1BZC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "PENSAMIENTO BOLIVARIANO",
+    "norm": "PENSAMIENTOBOLIVARIANO",
+    "ejemploCodigo": "R1BYC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "PENSAMIENTO CREATIVO",
+    "norm": "PENSAMIENTOCREATIVO",
+    "ejemploCodigo": "M0AZC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "PLANIFICACIÓN Y CONTROL",
+    "norm": "PLANIFICACIONYCONTROL",
+    "ejemploCodigo": "T1AYC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "PLANIFICACIÓN Y PROGRAMACIÓN",
+    "norm": "PLANIFICACIONYPROGRAMACION",
+    "ejemploCodigo": "T1CEC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "PLANTAS INDUSTRIALES",
+    "norm": "PLANTASINDUSTRIALES",
+    "ejemploCodigo": "R1BVC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "PRÁCTICAS PROFESIONALES",
+    "norm": "PRACTICASPROFESIONALES",
+    "ejemploCodigo": "E1BEC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "PRINCIPIOS DE TERMODINÁMICA",
+    "norm": "PRINCIPIOSDETERMODINAMICA",
+    "ejemploCodigo": "R1BKC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "PROCESAMIENTOS DE DATOS",
+    "norm": "PROCESAMIENTOSDEDATOS",
+    "ejemploCodigo": "T1BNC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "PROCESOS DE MANUFACTURA",
+    "norm": "PROCESOSDEMANUFACTURA",
+    "ejemploCodigo": "E1BAC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "PROCESOS ESPECIALES DE MANUFACTURA",
+    "norm": "PROCESOSESPECIALESDEMANUFACTURA",
+    "ejemploCodigo": "M1BFC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "PROCESOS INDUSTRIALES",
+    "norm": "PROCESOSINDUSTRIALES",
+    "ejemploCodigo": "T1BVC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "PROCESOS METALÚRGICOS",
+    "norm": "PROCESOSMETALURGICOS",
+    "ejemploCodigo": "E1ARC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "PROGRAMACIÓN II",
+    "norm": "PROGRAMACIONII",
+    "ejemploCodigo": "I1AQC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "PROYECTO DE GRADO MECANICA TERMICA",
+    "norm": "PROYECTODEGRADOMECANICATERMICA",
+    "ejemploCodigo": "R1CAC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "PROYECTO NACIONAL Y NUEVA CIUDADANÍA",
+    "norm": "PROYECTONACIONALYNUEVACIUDADANIA",
+    "ejemploCodigo": "C0ACC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "PROYECTO SOCIO INTEGRADOR",
+    "norm": "PROYECTOSOCIOINTEGRADOR",
+    "ejemploCodigo": "M1ALC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "PROYECTO SOCIO TECNOLÓGICO I",
+    "norm": "PROYECTOSOCIOTECNOLOGICOI",
+    "ejemploCodigo": "C1AKC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "PROYECTO SOCIO TECNOLÓGICO II",
+    "norm": "PROYECTOSOCIOTECNOLOGICOII",
+    "ejemploCodigo": "C1ASC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "PROYECTO SOCIO TECNOLÓGICO III",
+    "norm": "PROYECTOSOCIOTECNOLOGICOIII",
+    "ejemploCodigo": "E1BMC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "PROYECTO SOCIO TECNOLÓGICO IV",
+    "norm": "PROYECTOSOCIOTECNOLOGICOIV",
+    "ejemploCodigo": "E1CEC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "QUÍMICA",
+    "norm": "QUIMICA",
+    "ejemploCodigo": "E1AFC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "QUÍMICA APLICADA",
+    "norm": "QUIMICAAPLICADA",
+    "ejemploCodigo": "E1ALC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "RAZONAMIENTO NUMÉRICO",
+    "norm": "RAZONAMIENTONUMERICO",
+    "ejemploCodigo": "T0CTC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "RECURSOS MINERALES DE VENEZUELA",
+    "norm": "RECURSOSMINERALESDEVENEZUELA",
+    "ejemploCodigo": "E1BZC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "REDES AVANZADAS",
+    "norm": "REDESAVANZADAS",
+    "ejemploCodigo": "I1BMC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "REDES DE COMPUTADORA",
+    "norm": "REDESDECOMPUTADORA",
+    "ejemploCodigo": "I1AOC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "REFRIGERACIÓN Y AIRE ACONDICIONADO",
+    "norm": "REFRIGERACIONYAIREACONDICIONADO",
+    "ejemploCodigo": "R1BTC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "RESISTENCIA DE MATERIALES",
+    "norm": "RESISTENCIADEMATERIALES",
+    "ejemploCodigo": "R1BCC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "SEGURIDAD INFORMÁTICA",
+    "norm": "SEGURIDADINFORMATICA",
+    "ejemploCodigo": "I1BQC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "SELECCIÓN DE REFRACTARIOS",
+    "norm": "SELECCIONDEREFRACTARIOS",
+    "ejemploCodigo": "E1CLC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "SISTEMAS DE INFORMACIÓN",
+    "norm": "SISTEMASDEINFORMACION",
+    "ejemploCodigo": "C1AVC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "SISTEMAS OPERATIVOS",
+    "norm": "SISTEMASOPERATIVOS",
+    "ejemploCodigo": "I1BDC",
+    "ejemploPensum": "IXC"
+  },
+  {
+    "nombre": "SISTEMAS PRODUCTIVOS APLICADOS AL MANTENIMIENTO",
+    "norm": "SISTEMASPRODUCTIVOSAPLICADOSALMANTENIMIENTO",
+    "ejemploCodigo": "T1BMC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "SOBERANÍA POLÍTICA E INDEPENDENCIA ECONÓMICA",
+    "norm": "SOBERANIAPOLITICAEINDEPENDENCIAECONOMICA",
+    "ejemploCodigo": "M1AWC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "SOLDADURA",
+    "norm": "SOLDADURA",
+    "ejemploCodigo": "E1BDC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "SUPERVISIÓN Y MANEJO DE PERSONAL",
+    "norm": "SUPERVISIONYMANEJODEPERSONAL",
+    "ejemploCodigo": "R1BFC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "TALLER DE EXPRESIÓN ORAL Y ESCRITA",
+    "norm": "TALLERDEEXPRESIONORALYESCRITA",
+    "ejemploCodigo": "E0ADC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "TALLER DE INDUCCIÓN",
+    "norm": "TALLERDEINDUCCION",
+    "ejemploCodigo": "T0ACC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "TALLER DE MANTENIMIENTO",
+    "norm": "TALLERDEMANTENIMIENTO",
+    "ejemploCodigo": "T1AOC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "TALLER DE MECANIZADO",
+    "norm": "TALLERDEMECANIZADO",
+    "ejemploCodigo": "M1AIC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "TALLER PERMANENTE",
+    "norm": "TALLERPERMANENTE",
+    "ejemploCodigo": "M0ADC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "TALLER PROCESOS DE MANUFACTURA CONVENCIONAL Y CNC",
+    "norm": "TALLERPROCESOSDEMANUFACTURACONVENCIONALYCNC",
+    "ejemploCodigo": "M1ASC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "TÉCNICAS DE CARACTERIZACIÓN DE MATERIALES",
+    "norm": "TECNICASDECARACTERIZACIONDEMATERIALES",
+    "ejemploCodigo": "E1BPC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "TÉCNICAS DE MANTENIMIENTO",
+    "norm": "TECNICASDEMANTENIMIENTO",
+    "ejemploCodigo": "M1BEC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "TECNOLOGÍA DE ANÁLISIS DE FALLAS",
+    "norm": "TECNOLOGIADEANALISISDEFALLAS",
+    "ejemploCodigo": "T1CHC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "TECNOLOGÍA DE FABRICACIÓN",
+    "norm": "TECNOLOGIADEFABRICACION",
+    "ejemploCodigo": "T1APC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "TECNOLOGÍA DE HORNOS INDUSTRIALES",
+    "norm": "TECNOLOGIADEHORNOSINDUSTRIALES",
+    "ejemploCodigo": "E1CGC",
+    "ejemploPensum": "EXC"
+  },
+  {
+    "nombre": "TECNOLOGÍA DE LA INFORMACIÓN Y LA COMUNICACIÓN",
+    "norm": "TECNOLOGIADELAINFORMACIONYLACOMUNICACION",
+    "ejemploCodigo": "C0AFC",
+    "ejemploPensum": "CXC"
+  },
+  {
+    "nombre": "TECNOLOGÍA DE MATERIALES",
+    "norm": "TECNOLOGIADEMATERIALES",
+    "ejemploCodigo": "M1AHC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "TECNOLOGÍA MECÁNICA",
+    "norm": "TECNOLOGIAMECANICA",
+    "ejemploCodigo": "R1AUC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "TECNOLOGÍA Y SOCIEDAD",
+    "norm": "TECNOLOGIAYSOCIEDAD",
+    "ejemploCodigo": "M0AEC",
+    "ejemploPensum": "MXC"
+  },
+  {
+    "nombre": "TERMODINÁMICA",
+    "norm": "TERMODINAMICA",
+    "ejemploCodigo": "E1APC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "TRANSFERENCIA DE CALOR",
+    "norm": "TRANSFERENCIADECALOR",
+    "ejemploCodigo": "R1BUC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "TRATAMIENTOS TÉRMICOS",
+    "norm": "TRATAMIENTOSTERMICOS",
+    "ejemploCodigo": "E1ASC",
+    "ejemploPensum": "EXB"
+  },
+  {
+    "nombre": "TRIBOLOGÍA",
+    "norm": "TRIBOLOGIA",
+    "ejemploCodigo": "T1BBC",
+    "ejemploPensum": "TXC"
+  },
+  {
+    "nombre": "TURBINA",
+    "norm": "TURBINA",
+    "ejemploCodigo": "R1BRC",
+    "ejemploPensum": "RXC"
+  },
+  {
+    "nombre": "VALORACIÓN ADUANERA",
+    "norm": "VALORACIONADUANERA",
+    "ejemploCodigo": "C1AZC",
+    "ejemploPensum": "CXC"
+  }
+]

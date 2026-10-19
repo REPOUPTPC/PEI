@@ -42,6 +42,14 @@ export interface Carrera {
   created_at?: string;
 }
 
+export interface UnidadCurricular {
+  id: number;
+  nombre: string;
+  codigo?: string;
+  pensum?: string;
+  created_at?: string;
+}
+
 export interface Estado {
   id_estado: number;
   estado: string;
@@ -176,6 +184,9 @@ export interface Docente {
   numero_colegio?: string;
 
   pnfs?: string; // JSON de string[] con los nombres o códigos de PNF
+  conoce_lineas_pnf?: number; // 1: Sí, 0: No
+  lineas_pnf_detalle?: string; // Detalle de las líneas de investigación que conoce
+  asignaturas_imparte?: string; // JSON de string[] con las Unidades Curriculares que imparte actualmente
 
   linea_investigacion?: string;
   areas_interes_investigativo?: string; // JSON de string[]

@@ -63,6 +63,16 @@ async function initDatabase() {
   `);
 
   await client.execute(`
+    CREATE TABLE IF NOT EXISTS unidades_curriculares (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nombre TEXT UNIQUE NOT NULL,
+      codigo TEXT,
+      pensum TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+
+  await client.execute(`
     CREATE TABLE IF NOT EXISTS estados (
       id_estado INTEGER PRIMARY KEY,
       estado TEXT NOT NULL,
@@ -139,6 +149,9 @@ async function initDatabase() {
       numero_colegio TEXT,
       
       pnfs TEXT,
+      conoce_lineas_pnf INTEGER DEFAULT 0,
+      lineas_pnf_detalle TEXT,
+      asignaturas_imparte TEXT,
       
       linea_investigacion TEXT,
       investigacion_en_desarrollo INTEGER DEFAULT 0,

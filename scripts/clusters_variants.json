@@ -1,0 +1,130 @@
+[
+  {
+    "norm": "MATEMATICA",
+    "variants": [
+      "MATEMATICA",
+      "MATEMÁTICA"
+    ]
+  },
+  {
+    "norm": "FORMACIONSOCIOCRITICAI",
+    "variants": [
+      "FORMACIÓN SOCIO CRITICA I",
+      "FORMACIÓN SOCIO CRITICA I",
+      "FORMACIÓN SOCIO CRÍTICA I"
+    ]
+  },
+  {
+    "norm": "PROYECTOSOCIOTECNOLOGICOI",
+    "variants": [
+      "PROYECTO SOCIO TECNOLOGICO I",
+      "PROYECTO SOCIO TECNOLÓGICO I",
+      "PROYECTO SOCIO TECNOLOGÍCO I"
+    ]
+  },
+  {
+    "norm": "MATEMATICAFINANCIERA",
+    "variants": [
+      "MATEMATICA FINANCIERA",
+      "MATEMATICA FINANCIERA"
+    ]
+  },
+  {
+    "norm": "PROYECTOSOCIOTECNOLOGICOII",
+    "variants": [
+      "PROYECTO SOCIO TECNOLÓGICO II",
+      "PROYECTO SOCIO TECNOLOGÍCO II"
+    ]
+  },
+  {
+    "norm": "FORMACIONSOCIOCRITICAII",
+    "variants": [
+      "FORMACIÓN SOCIO CRITICA II",
+      "FORMACIÓN SOCIO CRÍTICA II"
+    ]
+  },
+  {
+    "norm": "SISTEMASDEINFORMACION",
+    "variants": [
+      "SISTEMAS DE INFORMACION",
+      "SISTEMAS DE INFORMACIÓN"
+    ]
+  },
+  {
+    "norm": "MATEMATICAI",
+    "variants": [
+      "MATEMÁTICA I",
+      "MATEMATICA I"
+    ]
+  },
+  {
+    "norm": "MATEMATICAII",
+    "variants": [
+      "MATEMÁTICA II",
+      "MATEMATICA II"
+    ]
+  },
+  {
+    "norm": "QUIMICAAPLICADA",
+    "variants": [
+      "QUIMÍCA APLICADA",
+      "QUÍMICA APLICADA"
+    ]
+  },
+  {
+    "norm": "DEPORTEREQUISITODEEGRESO",
+    "variants": [
+      "DEPORTE (REQUISITO DE EGRESO)",
+      "DEPORTE(REQUISITO DE EGRESO)"
+    ]
+  },
+  {
+    "norm": "PRACTICASPROFESIONALES",
+    "variants": [
+      "PRACTICAS PROFESIONALES",
+      "PRÁCTICAS PROFESIONALES"
+    ]
+  },
+  {
+    "norm": "INGLESACTIVIDADACREDITABLE",
+    "variants": [
+      "INGLES (ACTIVIDAD ACREDITABLE)",
+      "INGLÉS (ACTIVIDAD ACREDITABLE)"
+    ]
+  },
+  {
+    "norm": "IDIOMASINGLES",
+    "variants": [
+      "IDIOMAS(INGLES)",
+      "IDIOMAS(INGLÉS)"
+    ]
+  },
+  {
+    "norm": "DISENODEELEMENTOSDEMAQUINAS",
+    "variants": [
+      "DISEÑO DE ELEMENTOS DE MÁQUINAS",
+      "DISEÑO DE ELEMENTOS DE MAQUINAS"
+    ]
+  },
+  {
+    "norm": "MAQUINASHIDRAULICAS",
+    "variants": [
+      "MÁQUINAS HIDRÁULICAS",
+      "MAQUINAS HIDRAULICAS"
+    ]
+  },
+  {
+    "norm": "ELECTROTECNIA",
+    "variants": [
+      "ELECTROTECNÍA",
+      "ELECTROTECNIA"
+    ]
+  },
+  {
+    "norm": "TECNOLOGIADEANALISISDEFALLAS",
+    "variants": [
+      "TECNOLOGÍA DE ANÁLISIS DE FALLAS",
+      "TECNOLOGÍA DE ANALISIS DE FALLAS"
+    ]
+  }
+]

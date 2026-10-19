@@ -65,6 +65,7 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
   const articulos = parseJsonArray<ItemArticulo>(docente.articulos_detalle);
   const diplomados = parseJsonArray<ItemDiplomado>(docente.diplomados_detalle);
   const pnfs = parseJsonArray<string>(docente.pnfs);
+  const asignaturas = parseJsonArray<string>(docente.asignaturas_imparte);
   const eventos = parseJsonArray<ItemEvento>(docente.eventos_detalle);
   const desarrollos = parseJsonArray<ItemDesarrolloAcademico>(docente.desarrollo_academico_detalle);
   const tutorias = parseJsonArray<ItemTutoriaProyecto>(docente.tutorias_detalle);
@@ -164,6 +165,8 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
         ['Gremio / Colegiatura:', docente.colegiado === 1 ? `SÍ (${docente.nombre_colegio || 'Colegio Profesional'}${docente.numero_colegio ? ` Nro: ${docente.numero_colegio}` : ''})` : 'NO colegiado'],
         ['Registro RECITVEN:', docente.usuario_recitven === 1 ? 'SÍ está inscrito en RECITVEN' : 'NO inscrito'],
         ['PNFs en UPTPC:', pnfs.length > 0 ? pnfs.join(', ') : 'No especificado'],
+        ['Conoce Líneas de Inv. del Programa:', docente.conoce_lineas_pnf === 1 ? `SÍ${docente.lineas_pnf_detalle ? ` • ${docente.lineas_pnf_detalle}` : ''}` : 'NO'],
+        ['Asignaturas que imparte:', asignaturas.length > 0 ? asignaturas.join(', ') : 'No registrado'],
       ],
       theme: 'striped',
       headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -848,6 +851,37 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
                       {pnfs.map(p => (
                         <span key={p} className="bg-blue-50 text-[#0B4D94] border border-blue-200 text-[11px] px-2 py-0.5 rounded">
                           {p}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <strong className="text-slate-800 block mb-0.5">¿Conoce las líneas de investigación del programa?:</strong>
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-block px-2 py-0.5 text-[11px] rounded font-semibold ${
+                      docente.conoce_lineas_pnf === 1
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                    }`}>
+                      {docente.conoce_lineas_pnf === 1 ? 'Sí las conoce' : 'No las conoce'}
+                    </span>
+                    {docente.lineas_pnf_detalle && (
+                      <span className="text-[11px] text-slate-600 italic">
+                        &ldquo;{docente.lineas_pnf_detalle}&rdquo;
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {asignaturas.length > 0 && (
+                  <div>
+                    <strong className="text-slate-800 block mb-1">Asignaturas / Unidades Curriculares que imparte:</strong>
+                    <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto p-1 bg-slate-50 border border-slate-200 rounded-lg">
+                      {asignaturas.map(a => (
+                        <span key={a} className="bg-[#0B4D94] text-white text-[10px] px-2 py-0.5 rounded font-medium shadow-2xs">
+                          {a}
                         </span>
                       ))}
                     </div>

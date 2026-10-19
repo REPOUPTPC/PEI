@@ -39,9 +39,11 @@ import {
   ItemDesarrolloAcademico,
   ItemTutoriaProyecto,
   AreaInteresInvestigativo,
+  UnidadCurricular,
 } from '@/lib/types';
 import { useToast } from './Toast';
 import { SearchableSelect } from './SearchableSelect';
+import { MultiSearchableSelect } from './MultiSearchableSelect';
 
 interface EncuestaFormProps {
   initialDocente?: Docente | null;
@@ -127,6 +129,10 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
   const [nombreColegio, setNombreColegio] = useState('');
   const [numeroColegio, setNumeroColegio] = useState('');
   const [selectedPnfs, setSelectedPnfs] = useState<string[]>([]);
+  const [conoceLineasPnf, setConoceLineasPnf] = useState(false);
+  const [lineasPnfDetalle, setLineasPnfDetalle] = useState('');
+  const [unidadesList, setUnidadesList] = useState<UnidadCurricular[]>([]);
+  const [selectedAsignaturas, setSelectedAsignaturas] = useState<string[]>([]);
 
   // 4. Investigación y Áreas de Interés Investigativo (Catálogo SQL + Selección Múltiple + Creación)
   const [catalogoAreas, setCatalogoAreas] = useState<AreaInteresInvestigativo[]>([]);
@@ -181,6 +187,11 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
     fetch('/api/pnfs')
       .then(r => r.json())
       .then(d => d.success && setPnfList(d.pnfs))
+      .catch(console.error);
+
+    fetch('/api/unidades-curriculares')
+      .then(r => r.json())
+      .then(d => d.success && Array.isArray(d.unidades) && setUnidadesList(d.unidades))
       .catch(console.error);
 
     fetch('/api/profesiones')
@@ -287,6 +298,9 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       setNumeroColegio(initialDocente.numero_colegio || '');
 
       setSelectedPnfs(parseJsonSafe(initialDocente.pnfs));
+      setConoceLineasPnf(initialDocente.conoce_lineas_pnf === 1);
+      setLineasPnfDetalle(initialDocente.lineas_pnf_detalle || '');
+      setSelectedAsignaturas(parseJsonSafe(initialDocente.asignaturas_imparte));
 
       // Áreas de interés investigativo
       const loadedAreas = parseJsonSafe(initialDocente.areas_interes_investigativo);
@@ -397,6 +411,11 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
 
             setTutoriaProyectosActiva(doc.tutoria_proyectos_activa === 1);
             setTutoriasProyectos(parseJsonSafe(doc.tutorias_detalle));
+
+            setSelectedPnfs(parseJsonSafe(doc.pnfs));
+            setConoceLineasPnf(doc.conoce_lineas_pnf === 1);
+            setLineasPnfDetalle(doc.lineas_pnf_detalle || '');
+            setSelectedAsignaturas(parseJsonSafe(doc.asignaturas_imparte));
           } else {
             showToast('success', 'Docente Activo Reconocido', `${doc.nombre_completo} (${doc.cargo})`);
           }
@@ -731,6 +750,26 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
     });
   };
 
+  const handleAddCustomUnidad = async (nombre: string) => {
+    try {
+      const res = await fetch('/api/unidades-curriculares', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre }),
+      });
+      const data = await res.json();
+      if (data.success && data.unidad) {
+        setUnidadesList(prev => {
+          if (prev.some(u => u.nombre === data.unidad.nombre)) return prev;
+          return [...prev, data.unidad].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+        });
+        showToast('success', 'Unidad Curricular agregada', `"${nombre}" ha sido registrada.`);
+      }
+    } catch (err: any) {
+      console.error('Error registrando unidad curricular:', err);
+    }
+  };
+
   // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -797,6 +836,9 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       numero_colegio: numeroColegio,
 
       pnfs: selectedPnfs,
+      conoce_lineas_pnf: conoceLineasPnf ? 1 : 0,
+      lineas_pnf_detalle: conoceLineasPnf ? lineasPnfDetalle : '',
+      asignaturas_imparte: selectedAsignaturas,
 
       // Áreas de Interés Investigativo y Línea
       linea_investigacion: selectedAreas.join(', '),
@@ -1735,6 +1777,115 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
                   );
                 })}
               </div>
+            </div>
+
+            {/* PREGUNTA: ¿CONOCE LAS LÍNEAS DE INVESTIGACIÓN DEL PROGRAMA DONDE PARTICIPA? */}
+            <div className="sm:col-span-3 border border-slate-200 rounded-xl p-4 bg-white space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div>
+                  <label className="block text-xs font-bold text-slate-800">
+                    ¿Conoce las líneas de investigación del programa donde participa?
+                  </label>
+                  <p className="text-[11px] text-slate-500">
+                    Indique si conoce las líneas de investigación correspondientes a su PNF o programa de adscripción en la UPTPC.
+                  </p>
+                </div>
+                <span
+                  className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border self-start sm:self-auto ${
+                    conoceLineasPnf
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {conoceLineasPnf ? 'Sí conoce las líneas' : 'No las conoce'}
+                </span>
+              </div>
+
+              {/* Opciones Sí / No */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div
+                  onClick={() => setConoceLineasPnf(true)}
+                  className={`flex items-center gap-3 p-3 rounded-xl border text-xs font-medium cursor-pointer select-none transition-all ${
+                    conoceLineasPnf
+                      ? 'bg-blue-50/90 border-[#0B4D94] text-[#0B4D94] font-bold shadow-xs ring-1 ring-[#0B4D94]/30'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                      conoceLineasPnf ? 'border-[#0B4D94] bg-[#0B4D94] text-white' : 'border-slate-300 bg-white'
+                    }`}
+                  >
+                    {conoceLineasPnf && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                  <div>
+                    <span className="block font-bold">SÍ, conozco las líneas de investigación</span>
+                    <span className="text-[10px] text-slate-500 font-normal">Estoy al tanto de las áreas aprobadas para mi programa</span>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => {
+                    setConoceLineasPnf(false);
+                    setLineasPnfDetalle('');
+                  }}
+                  className={`flex items-center gap-3 p-3 rounded-xl border text-xs font-medium cursor-pointer select-none transition-all ${
+                    !conoceLineasPnf
+                      ? 'bg-slate-100 border-slate-400 text-slate-800 font-bold shadow-xs'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                      !conoceLineasPnf ? 'border-slate-600 bg-slate-600 text-white' : 'border-slate-300 bg-white'
+                    }`}
+                  >
+                    {!conoceLineasPnf && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                  <div>
+                    <span className="block font-bold">NO conozco las líneas de investigación</span>
+                    <span className="text-[10px] text-slate-500 font-normal">No he recibido la información o no las tengo presentes</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Si responde Sí: Campo para indicar cuáles líneas conoce */}
+              {conoceLineasPnf && (
+                <div className="pt-2 animate-slide-in space-y-1.5 border-t border-slate-100 mt-2">
+                  <label className="block text-xs font-bold text-slate-700">
+                    Indique las líneas de investigación del programa que conoce:
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Escriba o detalle las líneas de investigación que conoce de su programa (ej: Automatización Industrial, Soberanía Tecnológica, Mantenimiento Preventivo, Redes de Comunicación...)"
+                    value={lineasPnfDetalle}
+                    onChange={e => setLineasPnfDetalle(e.target.value)}
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none bg-slate-50/50"
+                  />
+                  <p className="text-[10px] text-slate-400">
+                    Puede indicar una o varias líneas de investigación separadas por comas.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* PREGUNTA: ¿QUÉ ASIGNATURAS / UNIDADES CURRICULARES IMPARTE ACTUALMENTE? */}
+            <div className="sm:col-span-3 border border-slate-200 rounded-xl p-4 bg-white space-y-2">
+              <MultiSearchableSelect
+                label="¿Qué asignaturas / Unidades Curriculares imparte actualmente?"
+                helperText="Despliegue el abanico de opciones para seleccionar las unidades curriculares a su cargo. Puede escribir en el buscador para filtrar y ubicar rápidamente el nombre de la unidad curricular (ej: Matemática I, Proyecto, Redes, etc.)."
+                placeholder="Haga clic aquí para desplegar el abanico de Unidades Curriculares..."
+                searchPlaceholder="Escriba para ubicar la Unidad Curricular..."
+                options={unidadesList.map(u => ({
+                  value: u.nombre,
+                  label: u.nombre,
+                  badge: u.codigo || undefined,
+                }))}
+                selectedValues={selectedAsignaturas}
+                onChange={setSelectedAsignaturas}
+                allowCustom={true}
+                onAddCustom={handleAddCustomUnidad}
+              />
             </div>
           </div>
         </section>
