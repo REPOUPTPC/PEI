@@ -33,11 +33,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    // Load admin permissions if rol is ADMIN
+    // Load permissions based on role
     let permisos = null;
     if (user.rol === 'ADMIN' || user.rol === 'SUPERADMIN') {
       const cfg = await db.execute({
         sql: "SELECT valor FROM configuracion WHERE clave = 'admin_permisos'",
+        args: [],
+      });
+      if (cfg.rows.length > 0) {
+        try {
+          permisos = JSON.parse(cfg.rows[0].valor as string);
+        } catch (e) {
+          permisos = null;
+        }
+      }
+    } else if (user.rol === 'ENCUESTADOR') {
+      const cfg = await db.execute({
+        sql: "SELECT valor FROM configuracion WHERE clave = 'encuestador_permisos'",
         args: [],
       });
       if (cfg.rows.length > 0) {

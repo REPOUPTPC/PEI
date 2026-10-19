@@ -37,7 +37,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         args: [username.trim(), password.trim(), nombre_completo.trim(), rol, activo ? 1 : 0],
       });
 
-      return res.status(201).json({ success: true, id: insert.lastInsertRowid });
+      const newId = insert.lastInsertRowid !== undefined && insert.lastInsertRowid !== null
+        ? Number(insert.lastInsertRowid)
+        : null;
+
+      return res.status(201).json({ success: true, id: newId });
     }
 
     if (req.method === 'PUT') {

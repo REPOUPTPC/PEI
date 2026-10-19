@@ -60,10 +60,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         args: [cleanNombre, determinedTipo],
       });
 
+      const newId = insert.lastInsertRowid !== undefined && insert.lastInsertRowid !== null
+        ? Number(insert.lastInsertRowid)
+        : null;
+
       return res.status(201).json({
         success: true,
         carrera: {
-          id: insert.lastInsertRowid,
+          id: newId,
           nombre: cleanNombre,
           tipo: determinedTipo,
         },
