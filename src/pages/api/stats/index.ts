@@ -28,14 +28,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const totalPendientes = Number(row?.totalPendientes || 0);
     const porcentajesEncuestados = totalDocentes > 0 ? Math.round((totalEncuestados / totalDocentes) * 100) : 0;
 
-    // 2. Distribución de profesiones y ramas (para drilldown dinámico)
+    // 2. Distribución de profesiones y ramas (solo docentes con datos académicos reales o censados)
     const profRes = await db.execute(`
       SELECT 
-        COALESCE(NULLIF(tipo_profesion, ''), 'OTRO') as tipo,
-        COALESCE(NULLIF(carrera_pregrado, ''), COALESCE(NULLIF(rama_especifica, ''), 'General / Sin especificar')) as rama,
+        COALESCE(NULLIF(TRIM(tipo_profesion), ''), 'OTRO') as tipo,
+        COALESCE(NULLIF(TRIM(carrera_pregrado), ''), COALESCE(NULLIF(TRIM(rama_especifica), ''), 'General / Sin especificar')) as rama,
         COUNT(*) as total
       FROM docentes
-      WHERE encuestado = 1 OR tipo_profesion IS NOT NULL
+      WHERE (encuestado = 1 OR (carrera_pregrado IS NOT NULL AND TRIM(carrera_pregrado) != ''))
+        AND tipo_profesion IS NOT NULL
+        AND TRIM(tipo_profesion) != ''
       GROUP BY tipo, rama
       ORDER BY total DESC
     `);

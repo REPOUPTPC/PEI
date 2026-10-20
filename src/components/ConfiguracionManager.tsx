@@ -13,6 +13,11 @@ import {
   ClipboardEdit,
   Eye,
   EyeOff,
+  Trash2,
+  AlertTriangle,
+  Download,
+  ShieldAlert,
+  Sparkles,
 } from 'lucide-react';
 import { AdminPermisos, EncuestadorPermisos, Usuario } from '@/lib/types';
 import { useToast } from './Toast';
@@ -62,6 +67,13 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
   // Observatorio Visibility Toggle State
   const [observatorioPublico, setObservatorioPublico] = useState<boolean>(false);
   const [savingObservatorioPublico, setSavingObservatorioPublico] = useState<boolean>(false);
+
+  // Limpieza para Pase a Producción
+  const [modalLimpiezaOpen, setModalLimpiezaOpen] = useState(false);
+  const [tipoLimpieza, setTipoLimpieza] = useState<'VACIAR_TODO' | 'REINICIAR_CENSO'>('VACIAR_TODO');
+  const [confirmText, setConfirmText] = useState('');
+  const [limpiandoDocentes, setLimpiandoDocentes] = useState(false);
+  const [descargandoRespaldo, setDescargandoRespaldo] = useState(false);
 
   // Load config on mount
   useEffect(() => {
@@ -216,6 +228,119 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
       showToast('error', 'Error de red', err.message);
     } finally {
       setSavingEncuestadorPermisos(false);
+    }
+  };
+
+  const handleDescargarRespaldo = async () => {
+    setDescargandoRespaldo(true);
+    try {
+      const res = await fetch('/api/docentes?limit=5000');
+      const data = await res.json();
+      if (!data.success || !Array.isArray(data.docentes)) {
+        showToast('error', 'Error al respaldar', data.error || 'No se pudieron obtener los docentes');
+        return;
+      }
+
+      const docentesList = data.docentes;
+      if (docentesList.length === 0) {
+        showToast('info', 'Sin Registros', 'No hay docentes registrados actualmente para respaldar.');
+        return;
+      }
+
+      const headers = [
+        'CEDULA',
+        'NOMBRE_COMPLETO',
+        'NOMBRES',
+        'APELLIDOS',
+        'CARGO',
+        'DESDE',
+        'STATUS',
+        'ENCUESTADO',
+        'EMAIL',
+        'TELEFONO',
+        'PROFESION',
+        'CARRERA',
+        'ESPECIALIDAD',
+        'MAESTRIA',
+        'DOCTORADO',
+        'PNF',
+        'LINEA_INVESTIGACION',
+      ];
+
+      const csvRows = [headers.join(',')];
+      docentesList.forEach((d: any) => {
+        const row = [
+          `"${(d.cedula || '').replace(/"/g, '""')}"`,
+          `"${(d.nombre_completo || '').replace(/"/g, '""')}"`,
+          `"${(d.nombres || '').replace(/"/g, '""')}"`,
+          `"${(d.apellidos || '').replace(/"/g, '""')}"`,
+          `"${(d.cargo || '').replace(/"/g, '""')}"`,
+          `"${(d.desde || '').replace(/"/g, '""')}"`,
+          `"${(d.status || '').replace(/"/g, '""')}"`,
+          d.encuestado ? 1 : 0,
+          `"${(d.email || '').replace(/"/g, '""')}"`,
+          `"${(d.telefono || '').replace(/"/g, '""')}"`,
+          `"${(d.tipo_profesion || '').replace(/"/g, '""')}"`,
+          `"${(d.carrera_pregrado || '').replace(/"/g, '""')}"`,
+          d.posee_especialidad ? 1 : 0,
+          d.posee_maestria ? 1 : 0,
+          d.posee_doctorado ? 1 : 0,
+          `"${(d.pnfs || '').replace(/"/g, '""')}"`,
+          `"${(d.linea_investigacion || '').replace(/"/g, '""')}"`,
+        ];
+        csvRows.push(row.join(','));
+      });
+
+      const blob = new Blob(['\uFEFF' + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `respaldo_docentes_uptpc_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showToast('success', 'Respaldo Descargado', `Se generó el archivo CSV con ${docentesList.length} docentes.`);
+    } catch (err: any) {
+      showToast('error', 'Error al descargar respaldo', err.message);
+    } finally {
+      setDescargandoRespaldo(false);
+    }
+  };
+
+  const handleEjecutarLimpieza = async () => {
+    const textUpper = confirmText.trim().toUpperCase();
+    if (textUpper !== 'PRODUCCION' && textUpper !== 'LIMPIAR') {
+      showToast('error', 'Confirmación Incorrecta', 'Escriba exactamente "PRODUCCION" o "LIMPIAR" para confirmar la operación.');
+      return;
+    }
+
+    setLimpiandoDocentes(true);
+    try {
+      const res = await fetch('/api/configuracion/limpiar-docentes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo_limpieza: tipoLimpieza,
+          confirmacion: textUpper,
+          rol: currentUser?.rol,
+        }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        showToast('success', 'Operación Completada', json.message);
+        setModalLimpiezaOpen(false);
+        setConfirmText('');
+        onPermissionsUpdated();
+      } else {
+        showToast('error', 'Error en la Operación', json.error || 'No se pudo completar la limpieza');
+      }
+    } catch (err: any) {
+      showToast('error', 'Error de Conexión', err.message);
+    } finally {
+      setLimpiandoDocentes(false);
     }
   };
 
@@ -677,6 +802,211 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
           )}
         </div>
       </div>
+
+      {/* PANEL DESTACADO: PASE A PRODUCCIÓN Y LIMPIEZA DE DATOS DE PRUEBA */}
+      {isSuperAdmin && (
+        <div className="p-6 bg-rose-50/60 border border-rose-200 rounded-2xl space-y-4 shadow-sm animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-rose-200/70 pb-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-rose-600 text-white rounded-xl shadow-xs mt-0.5">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm text-slate-900">
+                    Pase a Producción • Limpieza de Docentes de Prueba
+                  </h3>
+                  <span className="bg-rose-100 text-rose-800 border border-rose-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full">
+                    SUPERADMIN
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                  Permite depurar y limpiar la nómina de docentes ingresada durante la etapa de pruebas para dejar el sistema preparado para el despliegue oficial en producción.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleDescargarRespaldo}
+                disabled={descargandoRespaldo}
+                className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold px-3.5 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-2xs disabled:opacity-50"
+              >
+                {descargandoRespaldo ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-[#0B4D94]" />
+                    <span>Generando Respaldo...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 text-[#0B4D94]" />
+                    <span>Descargar Respaldo CSV</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmText('');
+                  setModalLimpiezaOpen(true);
+                }}
+                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Limpiar Datos de Prueba</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
+            <div className="p-3.5 bg-white/80 border border-rose-100 rounded-xl space-y-1">
+              <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                Opción 1: Vaciado Total de la Tabla
+              </span>
+              <p className="text-[11px] text-slate-500">
+                Elimina el 100% de los docentes registrados de prueba. El sistema quedará en cero (0) registros, listo para la carga masiva de la nómina real.
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-white/80 border border-rose-100 rounded-xl space-y-1">
+              <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                Opción 2: Reiniciar Censo a Pendientes
+              </span>
+              <p className="text-[11px] text-slate-500">
+                Conserva la lista básica de docentes (Cédula, Nombre y Cargo) pero limpia todas las respuestas del censo para que puedan ser entrevistados de nuevo.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE SEGURIDAD: LIMPIEZA PARA PASE A PRODUCCIÓN */}
+      {modalLimpiezaOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-5 border border-slate-200 animate-slide-in">
+            <div className="flex items-start gap-3">
+              <div className="p-3 bg-rose-100 text-rose-600 rounded-2xl shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900">
+                  Confirmación de Limpieza para Pase a Producción
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Esta acción modificará la base de datos de docentes del sistema PEI UPTPC.
+                </p>
+              </div>
+            </div>
+
+            {/* Selector de Modalidad */}
+            <div className="space-y-2 text-xs">
+              <label className="block font-bold text-slate-700">Seleccione la modalidad de limpieza:</label>
+              
+              <div
+                onClick={() => setTipoLimpieza('VACIAR_TODO')}
+                className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                  tipoLimpieza === 'VACIAR_TODO'
+                    ? 'bg-rose-50/50 border-rose-500 ring-1 ring-rose-500 shadow-2xs'
+                    : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900">Vaciar totalmente la tabla de docentes</span>
+                  <input
+                    type="radio"
+                    name="tipo_limpieza"
+                    checked={tipoLimpieza === 'VACIAR_TODO'}
+                    onChange={() => setTipoLimpieza('VACIAR_TODO')}
+                    className="text-rose-600"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Elimina todos los registros de docentes existentes (recomendado si desea importar la nómina definitiva desde Carga Masiva CSV).
+                </p>
+              </div>
+
+              <div
+                onClick={() => setTipoLimpieza('REINICIAR_CENSO')}
+                className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                  tipoLimpieza === 'REINICIAR_CENSO'
+                    ? 'bg-amber-50/50 border-amber-500 ring-1 ring-amber-500 shadow-2xs'
+                    : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-900">Reiniciar Censo (Conservar Nómina Base)</span>
+                  <input
+                    type="radio"
+                    name="tipo_limpieza"
+                    checked={tipoLimpieza === 'REINICIAR_CENSO'}
+                    onChange={() => setTipoLimpieza('REINICIAR_CENSO')}
+                    className="text-amber-600"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Mantiene Cédulas y Nombres ya existentes, pero elimina expedientes de prueba y vuelve a colocar a todos los docentes como Pendientes.
+                </p>
+              </div>
+            </div>
+
+            {/* Input de Seguridad con Palabra Clave */}
+            <div className="space-y-1.5 pt-1 text-xs">
+              <label className="block font-bold text-slate-800">
+                Para confirmar la operación, escriba <span className="font-mono text-rose-600 font-black">PRODUCCION</span> a continuación:
+              </label>
+              <input
+                type="text"
+                placeholder="Escriba PRODUCCION para confirmar"
+                value={confirmText}
+                onChange={e => setConfirmText(e.target.value.toUpperCase())}
+                className="w-full border border-slate-300 rounded-xl p-2.5 font-mono text-xs uppercase focus:ring-2 focus:ring-rose-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Botonera del Modal */}
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setModalLimpiezaOpen(false);
+                  setConfirmText('');
+                }}
+                disabled={limpiandoDocentes}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition-all"
+              >
+                Cancelar
+              </button>
+
+              <button
+                type="button"
+                onClick={handleEjecutarLimpieza}
+                disabled={
+                  limpiandoDocentes ||
+                  (confirmText.trim().toUpperCase() !== 'PRODUCCION' &&
+                    confirmText.trim().toUpperCase() !== 'LIMPIAR')
+                }
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-40"
+              >
+                {limpiandoDocentes ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Ejecutando Limpieza...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Confirmar y Limpiar Datos</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

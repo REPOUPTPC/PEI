@@ -28,21 +28,41 @@ export const CargaMasivaCSV: React.FC<CargaMasivaCSVProps> = ({ onSuccess, curre
   const [loading, setLoading] = useState(false);
   const [successCount, setSuccessCount] = useState<number | null>(null);
 
-  // Download template CSV
+  // Download template CSV completa
   const handleDownloadTemplate = () => {
     const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      'CEDULA,NOMBRE_COMPLETO,CARGO,DESDE,PROFESION,CARRERA,PNF,EMAIL,TELEFONO\n' +
-      'V-12345678,PEREZ LOPEZ JUAN CARLOS,ASISTENTE T.C.,2015-10-01,INGENIERO,Ingeniería Mecánica,PNF en Mecánica,juan.perez@uptpc.edu.ve,04121234567\n' +
-      'V-87654321,GARCIA MORALES MARIA ELENA,AGREGADO D.E.,2010-03-15,LICENCIADO,Licenciatura en Educación,PNF en Turismo,maria.garcia@uptpc.edu.ve,04147654321\n';
+      'CEDULA,NOMBRE_COMPLETO,CARGO,DESDE,PROFESION,CARRERA,PNF,EMAIL,TELEFONO\r\n' +
+      'V-12345678,PEREZ LOPEZ JUAN CARLOS,ASISTENTE T.C.,2015-10-01,INGENIERO,Ingeniería Mecánica,PNF en Mecánica,juan.perez@uptpc.edu.ve,04121234567\r\n' +
+      'V-87654321,GARCIA MORALES MARIA ELENA,AGREGADO D.E.,2010-03-15,LICENCIADO,Licenciatura en Educación,PNF en Turismo,maria.garcia@uptpc.edu.ve,04147654321\r\n';
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'plantilla_censo_docentes_uptpc.csv');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'plantilla_completa_docentes_uptpc.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Download template CSV simplificada (solo Cédula y Nombre Completo)
+  const handleDownloadTemplateBase = () => {
+    const csvContent =
+      'CEDULA,NOMBRE_COMPLETO\r\n' +
+      'V-12345678,PEREZ LOPEZ JUAN CARLOS\r\n' +
+      'V-87654321,GARCIA MORALES MARIA ELENA\r\n' +
+      'V-11223344,HERNANDEZ VALDERRAMA CIRO\r\n';
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'plantilla_base_cedula_nombre_uptpc.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleFileSelect = (selectedFile: File) => {
@@ -143,17 +163,29 @@ export const CargaMasivaCSV: React.FC<CargaMasivaCSVProps> = ({ onSuccess, curre
             Importación Masiva de Docentes desde Archivo CSV
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Cargue un lote de profesionales obviando la primera línea de encabezados con previsualización previa.
+            Cargue un lote de docentes (puede incluir únicamente Cédula y Nombre, o el formulario extendido) para previsualizar e importar a Turso.
           </p>
         </div>
 
-        <button
-          onClick={handleDownloadTemplate}
-          className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold px-3 py-2 rounded-xl transition-all flex items-center gap-2 shadow-2xs self-start sm:self-auto"
-        >
-          <Download className="w-3.5 h-3.5 text-[#0B4D94]" />
-          <span>Descargar Plantilla CSV</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={handleDownloadTemplateBase}
+            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold px-3 py-2 rounded-xl transition-all flex items-center gap-2 shadow-2xs"
+            title="Descargar formato CSV solo con Cédula y Nombre Completo"
+          >
+            <Download className="w-3.5 h-3.5 text-[#0B4D94]" />
+            <span>Plantilla Base (Cédula y Nombre)</span>
+          </button>
+
+          <button
+            onClick={handleDownloadTemplate}
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-3 py-2 rounded-xl transition-all flex items-center gap-2"
+            title="Descargar formato CSV completo con todos los campos"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-600" />
+            <span>Plantilla Completa</span>
+          </button>
+        </div>
       </div>
 
       {/* Zona de Arrastrar y Soltar Archivo */}

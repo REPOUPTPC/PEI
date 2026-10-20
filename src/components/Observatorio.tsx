@@ -105,8 +105,15 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
     const pendientes = Math.max(0, total - encuestados);
     const pct = total > 0 ? Math.round((encuestados / total) * 100) : 0;
 
+    // Filtrar docentes con información académica real o censados
+    const docentesConInfo = docentes.filter(d => 
+      d.encuestado === 1 || 
+      (d.carrera_pregrado && d.carrera_pregrado.trim()) ||
+      (d.tipo_profesion && d.tipo_profesion.trim() && d.tipo_profesion.trim() !== 'OTRO')
+    );
+
     const profMap: Record<string, { total: number; ramas: Record<string, number> }> = {};
-    docentes.forEach(d => {
+    docentesConInfo.forEach(d => {
       const tipo = (d.tipo_profesion || 'OTRO').toUpperCase();
       const rama = d.carrera_pregrado || d.rama_especifica || 'General';
       if (!profMap[tipo]) profMap[tipo] = { total: 0, ramas: {} };
@@ -122,100 +129,50 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
 
     const nivelesMap: Record<string, number> = {};
     docentes.forEach(d => {
-      let niv = 'Pregrado Universitario';
+      let niv = 'Pendiente de Censo';
       if (d.posee_doctorado === 1) niv = 'Doctorado (PhD)';
       else if (d.posee_maestria === 1) niv = 'Maestría / MSc';
       else if (d.posee_especialidad === 1) niv = 'Especialización';
+      else if (d.encuestado === 1) niv = 'Pregrado Universitario';
       nivelesMap[niv] = (nivelesMap[niv] || 0) + 1;
     });
 
     // PNF counts from docentes array
     const pnfCounts: Record<string, number> = {};
     docentes.forEach(d => {
-      if (d.pnfs && Array.isArray(d.pnfs)) {
-        d.pnfs.forEach(p => {
-          pnfCounts[p] = (pnfCounts[p] || 0) + 1;
-        });
+      if (d.pnfs) {
+        try {
+          const arr = typeof d.pnfs === 'string' ? JSON.parse(d.pnfs) : d.pnfs;
+          if (Array.isArray(arr)) {
+            arr.forEach(p => {
+              pnfCounts[p] = (pnfCounts[p] || 0) + 1;
+            });
+          }
+        } catch {}
       }
     });
 
     const distPnf = Object.keys(pnfCounts).map(k => ({ pnf: k, total: pnfCounts[k] }));
 
     return {
-      totalDocentes: total || 87,
-      totalEncuestados: encuestados || 10,
-      totalPendientes: pendientes || 77,
-      porcentajesEncuestados: pct || 11,
-      totalDoctores: docentes.filter(d => d.posee_doctorado === 1).length || 4,
-      totalMagisteres: docentes.filter(d => d.posee_maestria === 1).length || 10,
-      totalEspecialistas: docentes.filter(d => d.posee_especialidad === 1).length || 5,
-      distribucionProfesiones:
-        distProf.length > 0
-          ? distProf
-          : [
-              {
-                tipo: 'INGENIERO',
-                total: 6,
-                ramas: [
-                  { rama: 'Ingeniería Mecánica', total: 2 },
-                  { rama: 'Ingeniería en Informática', total: 1 },
-                  { rama: 'Ingeniería Industrial', total: 1 },
-                  { rama: 'Ingeniería en Mantenimiento', total: 1 },
-                  { rama: 'Ingeniería en Materiales', total: 1 },
-                ],
-              },
-              {
-                tipo: 'LICENCIADO',
-                total: 3,
-                ramas: [
-                  { rama: 'Licenciatura en Educación', total: 1 },
-                  { rama: 'Licenciatura en Turismo', total: 1 },
-                  { rama: 'Licenciatura en Administración', total: 1 },
-                ],
-              },
-              {
-                tipo: 'MEDICO',
-                total: 1,
-                ramas: [{ rama: 'Medicina General (Salud Ocupacional)', total: 1 }],
-              },
-            ],
-      distribucionNivelAcademico:
-        Object.keys(nivelesMap).length > 0
-          ? Object.keys(nivelesMap).map(k => ({ nivel: k, total: nivelesMap[k] }))
-          : [
-              { nivel: 'Doctorado (PhD)', total: 4 },
-              { nivel: 'Maestría / MSc', total: 10 },
-              { nivel: 'Especialización', total: 5 },
-              { nivel: 'Pregrado Universitario', total: 15 },
-              { nivel: 'Pendiente de Censo', total: 53 },
-            ],
-      distribucionPNF:
-        distPnf.length > 0
-          ? distPnf
-          : [
-              { pnf: 'PNF en Mecánica', total: 4 },
-              { pnf: 'PNF en Informática', total: 2 },
-              { pnf: 'PNF en Turismo', total: 2 },
-              { pnf: 'PNF en Mantenimiento', total: 2 },
-              { pnf: 'PT en Mecánica Térmica', total: 1 },
-              { pnf: 'PT en Mecánica Automotriz', total: 1 },
-              { pnf: 'PNF en Distribución y Logística', total: 2 },
-              { pnf: 'PNF en Materiales Industriales', total: 2 },
-            ],
-      conComponenteDocente: docentes.filter(d => d.componente_docente === 1).length || 10,
-      sinComponenteDocente: 0,
-      enRecitven: docentes.filter(d => d.usuario_recitven === 1).length || 9,
-      colegiados: docentes.filter(d => d.colegiado === 1).length || 10,
-      conPublicacionesLibros: docentes.filter(d => d.publicaciones_libros === 1).length || 5,
-      conPublicacionesArticulos: docentes.filter(d => d.publicaciones_articulos === 1).length || 9,
-      conInvestigacionActiva: docentes.filter(d => d.investigacion_en_desarrollo === 1).length || 10,
-      lineasInvestigacionTop: [
-        { linea: 'Eficiencia Energética y Termofluidos Aplicados', total: 2 },
-        { linea: 'Sistemas Inteligentes y Automatización Web', total: 1 },
-        { linea: 'Didáctica de las Ciencias Exactas y Pedagogía Crítica', total: 1 },
-        { linea: 'Confiabilidad Operacional y Mantenimiento Pesado', total: 1 },
-        { linea: 'Corrosión Marina y Protección Catódica', total: 1 },
-      ],
+      totalDocentes: total,
+      totalEncuestados: encuestados,
+      totalPendientes: pendientes,
+      porcentajesEncuestados: pct,
+      totalDoctores: docentes.filter(d => d.posee_doctorado === 1).length,
+      totalMagisteres: docentes.filter(d => d.posee_maestria === 1).length,
+      totalEspecialistas: docentes.filter(d => d.posee_especialidad === 1).length,
+      distribucionProfesiones: distProf,
+      distribucionNivelAcademico: Object.keys(nivelesMap).map(k => ({ nivel: k, total: nivelesMap[k] })),
+      distribucionPNF: distPnf,
+      conComponenteDocente: docentes.filter(d => d.componente_docente === 1).length,
+      sinComponenteDocente: docentes.filter(d => d.componente_docente === 0 && d.encuestado === 1).length,
+      enRecitven: docentes.filter(d => d.usuario_recitven === 1).length,
+      colegiados: docentes.filter(d => d.colegiado === 1).length,
+      conPublicacionesLibros: docentes.filter(d => d.publicaciones_libros === 1).length,
+      conPublicacionesArticulos: docentes.filter(d => d.publicaciones_articulos === 1).length,
+      conInvestigacionActiva: docentes.filter(d => d.investigacion_en_desarrollo === 1).length,
+      lineasInvestigacionTop: [],
     };
   }, [stats, docentes]);
 

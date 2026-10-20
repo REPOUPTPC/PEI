@@ -15,6 +15,8 @@ import {
   Building,
   Atom,
   ChevronRight,
+  ChevronDown,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Docente, Usuario } from '@/lib/types';
 import { useToast } from './Toast';
@@ -44,6 +46,7 @@ export const DirectorioDocentes: React.FC<DirectorioDocentesProps> = ({
   const [filterProfesion, setFilterProfesion] = useState<string>('TODAS');
   const [deleteDocenteTarget, setDeleteDocenteTarget] = useState<Docente | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
 
   const isSuperAdmin = currentUser?.rol === 'SUPERADMIN';
   const canEdit = currentUser?.rol === 'SUPERADMIN' || currentUser?.rol === 'ADMIN' || currentUser?.rol === 'ENCUESTADOR';
@@ -73,6 +76,108 @@ export const DirectorioDocentes: React.FC<DirectorioDocentesProps> = ({
 
     return true;
   });
+
+  // Exportar Cédulas y Nombres masivamente en CSV para completar datos después
+  const handleExportarCedulaNombre = () => {
+    const listToExport = filtered.length > 0 ? filtered : docentes;
+    if (listToExport.length === 0) {
+      showToast('info', 'Sin Docentes', 'No hay registros para exportar.');
+      return;
+    }
+
+    const headers = ['CEDULA', 'NOMBRE_COMPLETO'];
+    const csvRows = [headers.join(',')];
+
+    listToExport.forEach(d => {
+      const ced = (d.cedula || '').replace(/"/g, '""');
+      const nom = (d.nombre_completo || '').replace(/"/g, '""');
+      csvRows.push(`"${ced}","${nom}"`);
+    });
+
+    const blob = new Blob(['\uFEFF' + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `nomina_cedula_nombre_uptpc_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setExportDropdownOpen(false);
+    showToast('success', 'Exportación Exitosa', `Se exportaron ${listToExport.length} cédulas y nombres de docentes.`);
+  };
+
+  // Exportar Directorio Completo en CSV
+  const handleExportarCompleto = () => {
+    const listToExport = filtered.length > 0 ? filtered : docentes;
+    if (listToExport.length === 0) {
+      showToast('info', 'Sin Docentes', 'No hay registros para exportar.');
+      return;
+    }
+
+    const headers = [
+      'CEDULA',
+      'NOMBRE_COMPLETO',
+      'CARGO',
+      'DESDE',
+      'STATUS',
+      'CENSO_STATUS',
+      'PROFESION',
+      'CARRERA',
+      'POSTGRADO',
+      'PNF',
+      'EMAIL',
+      'TELEFONO',
+      'LINEA_INVESTIGACION',
+    ];
+    const csvRows = [headers.join(',')];
+
+    listToExport.forEach(d => {
+      let postgrado = 'Pregrado';
+      if (d.posee_doctorado === 1) postgrado = 'Doctorado';
+      else if (d.posee_maestria === 1) postgrado = 'Maestría';
+      else if (d.posee_especialidad === 1) postgrado = 'Especialización';
+
+      let pnfStr = '';
+      try {
+        const arr = JSON.parse(d.pnfs || '[]');
+        pnfStr = Array.isArray(arr) ? arr.join('; ') : '';
+      } catch {
+        pnfStr = d.pnfs || '';
+      }
+
+      const row = [
+        `"${(d.cedula || '').replace(/"/g, '""')}"`,
+        `"${(d.nombre_completo || '').replace(/"/g, '""')}"`,
+        `"${(d.cargo || 'DOCENTE').replace(/"/g, '""')}"`,
+        `"${(d.desde || '').replace(/"/g, '""')}"`,
+        `"${(d.status || 'ACTIVO').replace(/"/g, '""')}"`,
+        d.encuestado === 1 ? 'CENSADO' : 'PENDIENTE',
+        `"${(d.tipo_profesion || '').replace(/"/g, '""')}"`,
+        `"${(d.carrera_pregrado || '').replace(/"/g, '""')}"`,
+        `"${postgrado}"`,
+        `"${pnfStr.replace(/"/g, '""')}"`,
+        `"${(d.email || '').replace(/"/g, '""')}"`,
+        `"${(d.telefono || '').replace(/"/g, '""')}"`,
+        `"${(d.linea_investigacion || '').replace(/"/g, '""')}"`,
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    const blob = new Blob(['\uFEFF' + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `directorio_docentes_uptpc_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    setExportDropdownOpen(false);
+    showToast('success', 'Exportación Completa', `Se exportaron ${listToExport.length} registros detallados.`);
+  };
 
   const handleDeleteConfirm = async () => {
     if (!deleteDocenteTarget) return;
@@ -122,6 +227,48 @@ export const DirectorioDocentes: React.FC<DirectorioDocentesProps> = ({
           >
             <RefreshCw className="w-4 h-4" />
           </button>
+
+          {/* Menú de Exportación Masiva CSV */}
+          <div className="relative">
+            <button
+              onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+              className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-2xs transition-all flex items-center gap-1.5"
+            >
+              <Download className="w-4 h-4 text-[#0B4D94]" />
+              <span>Exportar CSV</span>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            </button>
+
+            {exportDropdownOpen && (
+              <div className="absolute right-0 mt-1.5 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-20 py-1.5 animate-slide-in">
+                <div className="px-3 py-1.5 border-b border-slate-100">
+                  <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">
+                    Opciones de Exportación
+                  </p>
+                </div>
+                <button
+                  onClick={handleExportarCedulaNombre}
+                  className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-blue-50 text-slate-700 flex items-start gap-2.5 transition-colors"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-[#0B4D94] shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-slate-900">Solo Cédulas y Nombres</p>
+                    <p className="text-[10px] text-slate-500">Nómina base para completar datos luego</p>
+                  </div>
+                </button>
+                <button
+                  onClick={handleExportarCompleto}
+                  className="w-full text-left px-3.5 py-2.5 text-xs hover:bg-blue-50 text-slate-700 flex items-start gap-2.5 transition-colors border-t border-slate-50"
+                >
+                  <Download className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-slate-900">Directorio Completo</p>
+                    <p className="text-[10px] text-slate-500">Todos los datos, títulos y estado de censo</p>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
 
           {canEdit && (
             <button

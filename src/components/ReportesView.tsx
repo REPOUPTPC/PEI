@@ -174,6 +174,41 @@ export const ReportesView: React.FC<ReportesViewProps> = ({ stats, docentes, onS
     }
   };
 
+  // Exportar datos del reporte actual en CSV
+  const handleExportCSV = () => {
+    if (reportDocentes.length === 0) return;
+    const headers = ['CEDULA', 'NOMBRE_COMPLETO', 'CARGO', 'PROFESION', 'CARRERA', 'POSTGRADO', 'ESTADO_CENSO'];
+    const rows = [headers.join(',')];
+
+    reportDocentes.forEach(d => {
+      let postgrado = 'Pregrado';
+      if (d.posee_doctorado === 1) postgrado = 'Doctorado';
+      else if (d.posee_maestria === 1) postgrado = 'Maestría';
+      else if (d.posee_especialidad === 1) postgrado = 'Especialista';
+
+      rows.push([
+        `"${(d.cedula || '').replace(/"/g, '""')}"`,
+        `"${(d.nombre_completo || '').replace(/"/g, '""')}"`,
+        `"${(d.cargo || 'DOCENTE').replace(/"/g, '""')}"`,
+        `"${(d.tipo_profesion || '').replace(/"/g, '""')}"`,
+        `"${(d.carrera_pregrado || '').replace(/"/g, '""')}"`,
+        `"${postgrado}"`,
+        d.encuestado === 1 ? 'CENSADO' : 'PENDIENTE',
+      ].join(','));
+    });
+
+    const blob = new Blob(['\uFEFF' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `reporte_pei_${selectedReportType.toLowerCase()}_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast('success', 'CSV Generado', 'El reporte en formato CSV se descargó exitosamente.');
+  };
+
   return (
     <div className="card-white p-6 sm:p-8 space-y-6 animate-fade-in shadow-md">
       {/* Encabezado */}
@@ -184,21 +219,33 @@ export const ReportesView: React.FC<ReportesViewProps> = ({ stats, docentes, onS
             <span>Módulo de Reportería Institucional</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-            Generador de Informes Interactivos y Exportación a PDF
+            Generador de Informes Interactivos y Exportación
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Seleccione el tipo de informe para visualizar datos filtrados y exportar el informe oficial en formato PDF.
+            Seleccione el tipo de informe para visualizar datos filtrados y exportar en formato PDF o CSV.
           </p>
         </div>
 
-        <button
-          onClick={handleExportPDF}
-          disabled={generatingPDF || reportDocentes.length === 0}
-          className="bg-[#0B4D94] hover:bg-[#073262] text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 self-start sm:self-auto disabled:opacity-50"
-        >
-          <Download className="w-4 h-4" />
-          <span>{generatingPDF ? 'Generando PDF...' : 'Descargar Informe en PDF'}</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={handleExportCSV}
+            disabled={reportDocentes.length === 0}
+            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 font-semibold text-xs px-4 py-2.5 rounded-xl shadow-2xs transition-all flex items-center gap-2 disabled:opacity-50"
+            title="Exportar datos del reporte actual en formato CSV"
+          >
+            <Download className="w-4 h-4 text-emerald-600" />
+            <span>Exportar CSV</span>
+          </button>
+
+          <button
+            onClick={handleExportPDF}
+            disabled={generatingPDF || reportDocentes.length === 0}
+            className="bg-[#0B4D94] hover:bg-[#073262] text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            <span>{generatingPDF ? 'Generando PDF...' : 'Descargar PDF'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Selector de Informes con Tarjetas Interactivas */}

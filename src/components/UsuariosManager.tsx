@@ -107,13 +107,19 @@ export const UsuariosManager: React.FC = () => {
         body: JSON.stringify(payload),
       });
 
-      const json = await res.json();
-      if (json.success) {
-        showToast('success', isEdit ? 'Usuario Actualizado' : 'Usuario Creado', `Se guardó a ${username} correctamente.`);
+      let json: any = {};
+      try {
+        json = await res.json();
+      } catch {
+        json = {};
+      }
+
+      if (res.ok && json.success) {
+        showToast('success', isEdit ? 'Usuario Actualizado' : 'Usuario Creado', json.message || `Se guardó a ${username} correctamente.`);
         setModalOpen(false);
         fetchUsuarios();
       } else {
-        showToast('error', 'Error al guardar', json.error);
+        showToast('error', 'Error al guardar', json.error || `Error (${res.status}): No se pudo completar la operación.`);
       }
     } catch (err: any) {
       showToast('error', 'Error de red', err.message);
@@ -127,13 +133,19 @@ export const UsuariosManager: React.FC = () => {
 
     try {
       const res = await fetch(`/api/usuarios?id=${deleteTarget.id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json.success) {
+      let json: any = {};
+      try {
+        json = await res.json();
+      } catch {
+        json = {};
+      }
+
+      if (res.ok && json.success) {
         showToast('success', 'Usuario Eliminado', `Se eliminó a ${deleteTarget.username}.`);
         setDeleteTarget(null);
         fetchUsuarios();
       } else {
-        showToast('error', 'Error al eliminar', json.error);
+        showToast('error', 'Error al eliminar', json.error || 'No se pudo eliminar el usuario.');
       }
     } catch (err: any) {
       showToast('error', 'Error de red', err.message);
