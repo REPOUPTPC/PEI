@@ -23,6 +23,8 @@ import {
   Square,
   Microscope,
   ExternalLink,
+  Compass,
+  Home,
 } from 'lucide-react';
 import {
   Docente,
@@ -98,6 +100,15 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
   const [telefono, setTelefono] = useState('');
   const [fotoUrl, setFotoUrl] = useState('');
 
+  // Procedencia (Lugar de Origen)
+  const [idEstadoProcedencia, setIdEstadoProcedencia] = useState<number | ''>('');
+  const [idMunicipioProcedencia, setIdMunicipioProcedencia] = useState<number | ''>('');
+  const [idParroquiaProcedencia, setIdParroquiaProcedencia] = useState<number | ''>('');
+  const [municipiosProcedencia, setMunicipiosProcedencia] = useState<Municipio[]>([]);
+  const [parroquiasProcedencia, setParroquiasProcedencia] = useState<Parroquia[]>([]);
+  const [mismaProcedenciaResidencia, setMismaProcedenciaResidencia] = useState(false);
+
+  // Residencia Actual
   const [idEstado, setIdEstado] = useState<number | ''>('');
   const [idMunicipio, setIdMunicipio] = useState<number | ''>('');
   const [idParroquia, setIdParroquia] = useState<number | ''>('');
@@ -226,7 +237,32 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       .catch(console.error);
   }, []);
 
-  // Cascading municipios
+  // Cascading municipios procedencia
+  useEffect(() => {
+    if (idEstadoProcedencia) {
+      fetch(`/api/geografia/municipios?id_estado=${idEstadoProcedencia}`)
+        .then(r => r.json())
+        .then(d => d.success && setMunicipiosProcedencia(d.municipios))
+        .catch(console.error);
+    } else {
+      setMunicipiosProcedencia([]);
+      setParroquiasProcedencia([]);
+    }
+  }, [idEstadoProcedencia]);
+
+  // Cascading parroquias procedencia
+  useEffect(() => {
+    if (idMunicipioProcedencia) {
+      fetch(`/api/geografia/parroquias?id_municipio=${idMunicipioProcedencia}`)
+        .then(r => r.json())
+        .then(d => d.success && setParroquiasProcedencia(d.parroquias))
+        .catch(console.error);
+    } else {
+      setParroquiasProcedencia([]);
+    }
+  }, [idMunicipioProcedencia]);
+
+  // Cascading municipios residencia
   useEffect(() => {
     if (idEstado) {
       fetch(`/api/geografia/municipios?id_estado=${idEstado}`)
@@ -239,7 +275,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
     }
   }, [idEstado]);
 
-  // Cascading parroquias
+  // Cascading parroquias residencia
   useEffect(() => {
     if (idMunicipio) {
       fetch(`/api/geografia/parroquias?id_municipio=${idMunicipio}`)
@@ -250,6 +286,16 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       setParroquias([]);
     }
   }, [idMunicipio]);
+
+  // Sincronización rápida si procedencia y residencia son idénticas
+  const handleToggleMismaUbicacion = (activar: boolean) => {
+    setMismaProcedenciaResidencia(activar);
+    if (activar) {
+      setIdEstado(idEstadoProcedencia);
+      setIdMunicipio(idMunicipioProcedencia);
+      setIdParroquia(idParroquiaProcedencia);
+    }
+  };
 
   // Hydrate initial docente if provided
   useEffect(() => {
@@ -264,10 +310,23 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       setTelefono(initialDocente.telefono || '');
       setFotoUrl(initialDocente.foto_url || '');
 
+      setIdEstadoProcedencia(initialDocente.id_estado_procedencia || '');
+      setIdMunicipioProcedencia(initialDocente.id_municipio_procedencia || '');
+      setIdParroquiaProcedencia(initialDocente.id_parroquia_procedencia || '');
+
       setIdEstado(initialDocente.id_estado || '');
       setIdMunicipio(initialDocente.id_municipio || '');
       setIdParroquia(initialDocente.id_parroquia || '');
       setDireccion(initialDocente.direccion || '');
+
+      if (
+        initialDocente.id_estado_procedencia &&
+        initialDocente.id_estado &&
+        initialDocente.id_estado_procedencia === initialDocente.id_estado &&
+        initialDocente.id_municipio_procedencia === initialDocente.id_municipio
+      ) {
+        setMismaProcedenciaResidencia(true);
+      }
 
       // 1. Formación Académica (Múltiples Títulos)
       const loadedTitulos = parseJsonSafe(initialDocente.titulos_adicionales);
@@ -388,6 +447,30 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
           setDesde(doc.desde || '');
           if (doc.encuestado === 1) {
             showToast('info', 'Docente ya censado', 'Cargando datos previos para actualización.');
+
+            if (doc.foto_url) setFotoUrl(doc.foto_url);
+            if (doc.fecha_nacimiento) setFechaNacimiento(doc.fecha_nacimiento);
+            if (doc.genero) setGenero(doc.genero);
+            if (doc.email) setEmail(doc.email);
+            if (doc.telefono) setTelefono(doc.telefono);
+
+            setIdEstadoProcedencia(doc.id_estado_procedencia || '');
+            setIdMunicipioProcedencia(doc.id_municipio_procedencia || '');
+            setIdParroquiaProcedencia(doc.id_parroquia_procedencia || '');
+
+            setIdEstado(doc.id_estado || '');
+            setIdMunicipio(doc.id_municipio || '');
+            setIdParroquia(doc.id_parroquia || '');
+            setDireccion(doc.direccion || '');
+
+            if (
+              doc.id_estado_procedencia &&
+              doc.id_estado &&
+              doc.id_estado_procedencia === doc.id_estado &&
+              doc.id_municipio_procedencia === doc.id_municipio
+            ) {
+              setMismaProcedenciaResidencia(true);
+            }
 
             // Hidratar campos completos
             const loadedTitulos = parseJsonSafe(doc.titulos_adicionales);
@@ -814,6 +897,10 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
     const munObj = municipios.find(m => m.id_municipio === Number(idMunicipio));
     const parObj = parroquias.find(p => p.id_parroquia === Number(idParroquia));
 
+    const estadoProcObj = estados.find(e => e.id_estado === Number(idEstadoProcedencia));
+    const munProcObj = municipiosProcedencia.find(m => m.id_municipio === Number(idMunicipioProcedencia));
+    const parProcObj = parroquiasProcedencia.find(p => p.id_parroquia === Number(idParroquiaProcedencia));
+
     const primaryTitle = titulos[0] || {
       tipo_profesion: 'INGENIERO',
       carrera: '',
@@ -832,6 +919,13 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       email,
       telefono,
       foto_url: fotoUrl,
+
+      id_estado_procedencia: idEstadoProcedencia ? Number(idEstadoProcedencia) : null,
+      estado_procedencia_nombre: estadoProcObj?.estado || null,
+      id_municipio_procedencia: idMunicipioProcedencia ? Number(idMunicipioProcedencia) : null,
+      municipio_procedencia_nombre: munProcObj?.municipio || null,
+      id_parroquia_procedencia: idParroquiaProcedencia ? Number(idParroquiaProcedencia) : null,
+      parroquia_procedencia_nombre: parProcObj?.parroquia || null,
 
       id_estado: idEstado ? Number(idEstado) : null,
       estado_nombre: estadoObj?.estado || null,
@@ -1168,75 +1262,229 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
           </div>
         </section>
 
-        {/* BLOQUE 2: PROCEDENCIA GEOGRÁFICA (VENEZUELA.SQL CASCADA) */}
+        {/* BLOQUE 2: GEOGRAFÍA NACIONAL - PROCEDENCIA Y RESIDENCIA */}
         <section className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
-            <span className="w-5 h-5 rounded-full bg-[#0B4D94] text-white text-xs flex items-center justify-center font-bold">
-              2
-            </span>
-            <span>Procedencia y Residencia (Geografía Nacional)</span>
-          </h3>
+          <div className="border-b border-slate-100 pb-2">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[#0B4D94] text-white text-xs flex items-center justify-center font-bold">
+                2
+              </span>
+              <span>Procedencia y Residencia (Geografía Nacional)</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Distinga su lugar de origen (nacimiento o procedencia) de su lugar de residencia actual en Venezuela.
+            </p>
+          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Estado</label>
-              <SearchableSelect
-                value={idEstado}
-                onChange={val => {
-                  setIdEstado(val ? Number(val) : '');
-                  setIdMunicipio('');
-                  setIdParroquia('');
-                }}
-                options={estados.map(est => ({
-                  value: est.id_estado,
-                  label: est.estado,
-                }))}
-                placeholder="Seleccione Estado..."
-              />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* SUB-BLOQUE A: LUGAR DE PROCEDENCIA (ORIGEN) */}
+            <div className="p-4 sm:p-5 bg-blue-50/40 border border-blue-200/80 rounded-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-blue-200/60 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-100 text-[#0B4D94] flex items-center justify-center">
+                    <Compass className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      Lugar de Procedencia (Origen)
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Lugar de nacimiento o de donde proviene en Venezuela
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                  Origen
+                </span>
+              </div>
+
+              <div className="space-y-3.5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Estado de Procedencia
+                  </label>
+                  <SearchableSelect
+                    value={idEstadoProcedencia}
+                    onChange={val => {
+                      const nextVal = val ? Number(val) : '';
+                      setIdEstadoProcedencia(nextVal);
+                      setIdMunicipioProcedencia('');
+                      setIdParroquiaProcedencia('');
+                      if (mismaProcedenciaResidencia) {
+                        setIdEstado(nextVal);
+                        setIdMunicipio('');
+                        setIdParroquia('');
+                      }
+                    }}
+                    options={estados.map(est => ({
+                      value: est.id_estado,
+                      label: est.estado,
+                    }))}
+                    placeholder="Seleccione Estado de origen..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Municipio de Procedencia
+                  </label>
+                  <SearchableSelect
+                    value={idMunicipioProcedencia}
+                    disabled={!idEstadoProcedencia}
+                    disabledMessage="Seleccione primero el Estado de procedencia"
+                    onChange={val => {
+                      const nextVal = val ? Number(val) : '';
+                      setIdMunicipioProcedencia(nextVal);
+                      setIdParroquiaProcedencia('');
+                      if (mismaProcedenciaResidencia) {
+                        setIdMunicipio(nextVal);
+                        setIdParroquia('');
+                      }
+                    }}
+                    options={municipiosProcedencia.map(m => ({
+                      value: m.id_municipio,
+                      label: m.municipio,
+                    }))}
+                    placeholder="Seleccione Municipio de origen..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Parroquia de Procedencia
+                  </label>
+                  <SearchableSelect
+                    value={idParroquiaProcedencia}
+                    disabled={!idMunicipioProcedencia}
+                    disabledMessage="Seleccione primero el Municipio de procedencia"
+                    onChange={val => {
+                      const nextVal = val ? Number(val) : '';
+                      setIdParroquiaProcedencia(nextVal);
+                      if (mismaProcedenciaResidencia) {
+                        setIdParroquia(nextVal);
+                      }
+                    }}
+                    options={parroquiasProcedencia.map(p => ({
+                      value: p.id_parroquia,
+                      label: p.parroquia,
+                    }))}
+                    placeholder="Seleccione Parroquia de origen..."
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Municipio</label>
-              <SearchableSelect
-                value={idMunicipio}
-                disabled={!idEstado}
-                disabledMessage="Seleccione Estado primero"
-                onChange={val => {
-                  setIdMunicipio(val ? Number(val) : '');
-                  setIdParroquia('');
-                }}
-                options={municipios.map(m => ({
-                  value: m.id_municipio,
-                  label: m.municipio,
-                }))}
-                placeholder="Seleccione Municipio..."
-              />
-            </div>
+            {/* SUB-BLOQUE B: LUGAR DE RESIDENCIA ACTUAL */}
+            <div className="p-4 sm:p-5 bg-slate-50/70 border border-slate-200 rounded-2xl space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                    <Home className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                      Residencia Actual (Donde Vive)
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Ubicación de domicilio actual
+                    </p>
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Parroquia</label>
-              <SearchableSelect
-                value={idParroquia}
-                disabled={!idMunicipio}
-                disabledMessage="Seleccione Municipio primero"
-                onChange={val => setIdParroquia(val ? Number(val) : '')}
-                options={parroquias.map(p => ({
-                  value: p.id_parroquia,
-                  label: p.parroquia,
-                }))}
-                placeholder="Seleccione Parroquia..."
-              />
-            </div>
+                {/* Sincronización rápida */}
+                <button
+                  type="button"
+                  onClick={() => handleToggleMismaUbicacion(!mismaProcedenciaResidencia)}
+                  className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all ${
+                    mismaProcedenciaResidencia
+                      ? 'bg-emerald-100 border-emerald-300 text-emerald-800'
+                      : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {mismaProcedenciaResidencia ? (
+                    <CheckSquare className="w-3.5 h-3.5 text-emerald-600" />
+                  ) : (
+                    <Square className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                  <span>Misma que Procedencia</span>
+                </button>
+              </div>
 
-            <div className="sm:col-span-3">
-              <label className="block text-xs font-bold text-slate-700 mb-1">Dirección de Residencia</label>
-              <input
-                type="text"
-                placeholder="Urbanización / Sector, Calle, Edificio o Casa"
-                value={direccion}
-                onChange={e => setDireccion(e.target.value)}
-                className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
-              />
+              <div className="space-y-3.5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Estado de Residencia
+                  </label>
+                  <SearchableSelect
+                    value={idEstado}
+                    onChange={val => {
+                      setIdEstado(val ? Number(val) : '');
+                      setIdMunicipio('');
+                      setIdParroquia('');
+                      if (mismaProcedenciaResidencia) setMismaProcedenciaResidencia(false);
+                    }}
+                    options={estados.map(est => ({
+                      value: est.id_estado,
+                      label: est.estado,
+                    }))}
+                    placeholder="Seleccione Estado donde vive..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Municipio de Residencia
+                  </label>
+                  <SearchableSelect
+                    value={idMunicipio}
+                    disabled={!idEstado}
+                    disabledMessage="Seleccione primero el Estado de residencia"
+                    onChange={val => {
+                      setIdMunicipio(val ? Number(val) : '');
+                      setIdParroquia('');
+                      if (mismaProcedenciaResidencia) setMismaProcedenciaResidencia(false);
+                    }}
+                    options={municipios.map(m => ({
+                      value: m.id_municipio,
+                      label: m.municipio,
+                    }))}
+                    placeholder="Seleccione Municipio donde vive..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Parroquia de Residencia
+                  </label>
+                  <SearchableSelect
+                    value={idParroquia}
+                    disabled={!idMunicipio}
+                    disabledMessage="Seleccione primero el Municipio de residencia"
+                    onChange={val => {
+                      setIdParroquia(val ? Number(val) : '');
+                      if (mismaProcedenciaResidencia) setMismaProcedenciaResidencia(false);
+                    }}
+                    options={parroquias.map(p => ({
+                      value: p.id_parroquia,
+                      label: p.parroquia,
+                    }))}
+                    placeholder="Seleccione Parroquia donde vive..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Dirección Específica de Domicilio
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Urbanización / Sector, Calle, Edificio o Casa"
+                    value={direccion}
+                    onChange={e => setDireccion(e.target.value)}
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </section>

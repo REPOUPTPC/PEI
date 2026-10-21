@@ -76,6 +76,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         cargo,
         desde,
         status,
+        id_estado_procedencia,
+        estado_procedencia_nombre,
+        id_municipio_procedencia,
+        municipio_procedencia_nombre,
+        id_parroquia_procedencia,
+        parroquia_procedencia_nombre,
         id_estado,
         estado_nombre,
         id_municipio,
@@ -172,10 +178,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Ignorar si la columna ya existe
       }
 
+      try {
+        await db.execute('ALTER TABLE docentes ADD COLUMN id_estado_procedencia INTEGER DEFAULT NULL;');
+        await db.execute('ALTER TABLE docentes ADD COLUMN estado_procedencia_nombre TEXT DEFAULT NULL;');
+        await db.execute('ALTER TABLE docentes ADD COLUMN id_municipio_procedencia INTEGER DEFAULT NULL;');
+        await db.execute('ALTER TABLE docentes ADD COLUMN municipio_procedencia_nombre TEXT DEFAULT NULL;');
+        await db.execute('ALTER TABLE docentes ADD COLUMN id_parroquia_procedencia INTEGER DEFAULT NULL;');
+        await db.execute('ALTER TABLE docentes ADD COLUMN parroquia_procedencia_nombre TEXT DEFAULT NULL;');
+      } catch {
+        // Ignorar si ya existen
+      }
+
       await db.execute({
         sql: `INSERT OR REPLACE INTO docentes (
           cedula, nombres, apellidos, nombre_completo, fecha_nacimiento, genero, email, telefono, foto_url,
           cargo, desde, status,
+          id_estado_procedencia, estado_procedencia_nombre, id_municipio_procedencia, municipio_procedencia_nombre, id_parroquia_procedencia, parroquia_procedencia_nombre,
           id_estado, estado_nombre, id_municipio, municipio_nombre, id_parroquia, parroquia_nombre, direccion,
           tipo_profesion, carrera_pregrado, rama_especifica, universidad_pregrado, anio_pregrado, titulos_adicionales,
           posee_especialidad, especialidades, posee_maestria, maestrias, posee_doctorado, doctorados,
@@ -190,6 +208,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?,
+          ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?,
@@ -215,6 +234,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           cargo || 'DOCENTE',
           desde || null,
           status || 'ACTIVO',
+          id_estado_procedencia || null,
+          estado_procedencia_nombre || null,
+          id_municipio_procedencia || null,
+          municipio_procedencia_nombre || null,
+          id_parroquia_procedencia || null,
+          parroquia_procedencia_nombre || null,
           id_estado || null,
           estado_nombre || null,
           id_municipio || null,

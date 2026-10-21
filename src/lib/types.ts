@@ -170,6 +170,15 @@ export interface Docente {
   desde?: string;
   status?: string;
 
+  // Procedencia (Lugar de Origen)
+  id_estado_procedencia?: number;
+  estado_procedencia_nombre?: string;
+  id_municipio_procedencia?: number;
+  municipio_procedencia_nombre?: string;
+  id_parroquia_procedencia?: number;
+  parroquia_procedencia_nombre?: string;
+
+  // Residencia Actual (Geografía Nacional)
   id_estado?: number;
   estado_nombre?: string;
   id_municipio?: number;
@@ -259,6 +268,10 @@ export interface ObservatorioStats {
   conInvestigacionActiva: number;
   lineasInvestigacionTop: { linea: string; total: number }[];
   distribucionGeografica?: { estado: string; municipio: string; total: number }[];
+  distribucionProcedencia?: { estado: string; municipio?: string; total: number }[];
+  distribucionResidencia?: { estado: string; municipio: string; total: number }[];
+  comparativaGeografica?: { estado: string; procedencia: number; residencia: number }[];
+  tasaMovilidad?: { mismos: number; diferentes: number; pctMovilidad: number; totalConDatos: number };
   distribucionTipoUniversidad?: { tipo: string; total: number }[];
   distribucionUniversidades?: { univ: string; tipo: string; total: number }[];
 }

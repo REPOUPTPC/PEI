@@ -120,6 +120,13 @@ async function initDatabase() {
       desde TEXT,
       status TEXT DEFAULT 'ACTIVO',
       
+      id_estado_procedencia INTEGER,
+      estado_procedencia_nombre TEXT,
+      id_municipio_procedencia INTEGER,
+      municipio_procedencia_nombre TEXT,
+      id_parroquia_procedencia INTEGER,
+      parroquia_procedencia_nombre TEXT,
+
       id_estado INTEGER,
       estado_nombre TEXT,
       id_municipio INTEGER,

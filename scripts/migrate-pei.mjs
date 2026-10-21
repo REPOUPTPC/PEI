@@ -26,6 +26,12 @@ async function migrate() {
     { name: 'desarrollo_academico_detalle', type: 'TEXT' },
     { name: 'tutoria_proyectos_activa', type: 'INTEGER DEFAULT 0' },
     { name: 'tutorias_detalle', type: 'TEXT' },
+    { name: 'id_estado_procedencia', type: 'INTEGER DEFAULT NULL' },
+    { name: 'estado_procedencia_nombre', type: 'TEXT DEFAULT NULL' },
+    { name: 'id_municipio_procedencia', type: 'INTEGER DEFAULT NULL' },
+    { name: 'municipio_procedencia_nombre', type: 'TEXT DEFAULT NULL' },
+    { name: 'id_parroquia_procedencia', type: 'INTEGER DEFAULT NULL' },
+    { name: 'parroquia_procedencia_nombre', type: 'TEXT DEFAULT NULL' },
   ];
 
   const tableInfo = await client.execute('PRAGMA table_info(docentes);');

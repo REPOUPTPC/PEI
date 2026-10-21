@@ -122,8 +122,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       LIMIT 10
     `);
 
-    // 6. Distribución por Estado / Geográfica
-    const geoRes = await db.execute(`
+    // 6. Distribución Geográfica de Residencia Actual (Estados y Municipios)
+    const resResidencia = await db.execute(`
       SELECT 
         COALESCE(estado_nombre, 'Carabobo') as estado, 
         COALESCE(municipio_nombre, 'Puerto Cabello') as municipio, 
@@ -131,9 +131,68 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       FROM docentes 
       WHERE encuestado = 1 
       GROUP BY estado, municipio 
-      ORDER BY total DESC 
-      LIMIT 10
+      ORDER BY total DESC
     `);
+
+    // 6.b Distribución Geográfica de Procedencia / Origen
+    const resProcedencia = await db.execute(`
+      SELECT 
+        COALESCE(estado_procedencia_nombre, estado_nombre, 'Carabobo') as estado, 
+        COALESCE(municipio_procedencia_nombre, municipio_nombre, 'Puerto Cabello') as municipio, 
+        COUNT(*) as total 
+      FROM docentes 
+      WHERE encuestado = 1 
+      GROUP BY estado, municipio 
+      ORDER BY total DESC
+    `);
+
+    // 6.c Análisis de Movilidad Geográfica (Lugar de Origen vs. Lugar de Residencia Actual)
+    const movilidadRes = await db.execute(`
+      SELECT 
+        COALESCE(estado_procedencia_nombre, estado_nombre, 'Carabobo') as estado_procedencia,
+        COALESCE(estado_nombre, 'Carabobo') as estado_residencia
+      FROM docentes
+      WHERE encuestado = 1
+    `);
+
+    const estadoProcedenciaMap: Record<string, number> = {};
+    const estadoResidenciaMap: Record<string, number> = {};
+    let mismos = 0;
+    let diferentes = 0;
+
+    movilidadRes.rows.forEach(r => {
+      const proc = ((r.estado_procedencia as string) || 'Carabobo').trim();
+      const res = ((r.estado_residencia as string) || 'Carabobo').trim();
+
+      estadoProcedenciaMap[proc] = (estadoProcedenciaMap[proc] || 0) + 1;
+      estadoResidenciaMap[res] = (estadoResidenciaMap[res] || 0) + 1;
+
+      if (proc.toLowerCase() === res.toLowerCase()) {
+        mismos++;
+      } else {
+        diferentes++;
+      }
+    });
+
+    const todosEstados = Array.from(
+      new Set([...Object.keys(estadoProcedenciaMap), ...Object.keys(estadoResidenciaMap)])
+    ).sort();
+
+    const comparativaGeografica = todosEstados
+      .map(est => ({
+        estado: est,
+        procedencia: estadoProcedenciaMap[est] || 0,
+        residencia: estadoResidenciaMap[est] || 0,
+      }))
+      .sort((a, b) => b.procedencia + b.residencia - (a.procedencia + a.residencia));
+
+    const totalConDatos = mismos + diferentes;
+    const tasaMovilidad = {
+      mismos,
+      diferentes,
+      pctMovilidad: totalConDatos > 0 ? Math.round((diferentes / totalConDatos) * 100) : 0,
+      totalConDatos,
+    };
 
     // 7. Distribución Real de Universidades (Alma Máter) y Tipo (Pública / Privada)
     const univsRes = await db.execute(`
@@ -225,11 +284,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           linea: r.linea_investigacion as string,
           total: Number(r.total),
         })),
-        distribucionGeografica: geoRes.rows.map(r => ({
+        distribucionGeografica: resResidencia.rows.map(r => ({
           estado: r.estado as string,
           municipio: r.municipio as string,
           total: Number(r.total),
         })),
+        distribucionResidencia: resResidencia.rows.map(r => ({
+          estado: r.estado as string,
+          municipio: r.municipio as string,
+          total: Number(r.total),
+        })),
+        distribucionProcedencia: resProcedencia.rows.map(r => ({
+          estado: r.estado as string,
+          municipio: r.municipio as string,
+          total: Number(r.total),
+        })),
+        comparativaGeografica,
+        tasaMovilidad,
         distribucionTipoUniversidad,
         distribucionUniversidades,
       },

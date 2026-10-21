@@ -21,6 +21,7 @@ import {
   Atom,
   Presentation,
   Compass,
+  Home,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -106,7 +107,8 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
         ['Cédula de Identidad:', docente.cedula || ''],
         ['Cargo / Dedicación:', `${docente.cargo || 'DOCENTE'} (Desde: ${docente.desde || 'N/D'})`],
         ['Condición / Estatus:', docente.status || 'ACTIVO'],
-        ['Procedencia Geográfica:', `${docente.estado_nombre || 'Carabobo'} - ${docente.municipio_nombre || 'Puerto Cabello'}, Parroquia ${docente.parroquia_nombre || 'N/D'}`],
+        ['Lugar de Procedencia (Origen):', `${docente.estado_procedencia_nombre || docente.estado_nombre || 'Carabobo'}${docente.municipio_procedencia_nombre ? ` - ${docente.municipio_procedencia_nombre}` : ''}${docente.parroquia_procedencia_nombre ? `, Parr. ${docente.parroquia_procedencia_nombre}` : ''}`],
+        ['Residencia Actual (Donde Vive):', `${docente.estado_nombre || 'Carabobo'} - ${docente.municipio_nombre || 'Puerto Cabello'}, Parr. ${docente.parroquia_nombre || 'N/D'}${docente.direccion ? ` (${docente.direccion})` : ''}`],
         ['Correo Electrónico / Teléfono:', `${docente.email || 'N/D'} | ${docente.telefono || 'N/D'}`],
       ],
       theme: 'striped',
@@ -605,35 +607,66 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
                 </div>
               </div>
 
-              {/* Procedencia Geográfica y Contacto */}
-              <div className="border border-slate-200 rounded-xl p-4 bg-white">
-                <h4 className="font-bold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mb-3">
+              {/* Procedencia Geográfica y Residencia */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-3">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-1.5 border-b border-slate-100 pb-2">
                   <MapPin className="w-4 h-4 text-[#0B4D94]" />
-                  <span>Ubicación y Procedencia</span>
+                  <span>Geografía y Contacto</span>
                 </h4>
-                <div className="space-y-2 text-xs text-slate-700">
-                  <p>
-                    <strong className="text-slate-900">Estado:</strong> {docente.estado_nombre || 'Carabobo'}
+
+                {/* Sub-bloque Procedencia */}
+                <div className="p-2.5 bg-blue-50/60 rounded-lg border border-blue-100 text-xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-blue-900 text-[11px] uppercase tracking-wider">
+                    <Compass className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Lugar de Procedencia (Origen)</span>
+                  </div>
+                  <p className="text-slate-700 pl-5">
+                    <strong>Estado:</strong> {docente.estado_procedencia_nombre || docente.estado_nombre || 'Carabobo'}
                   </p>
-                  <p>
-                    <strong className="text-slate-900">Municipio:</strong> {docente.municipio_nombre || 'Puerto Cabello'}
-                  </p>
-                  <p>
-                    <strong className="text-slate-900">Parroquia:</strong> {docente.parroquia_nombre || 'No especificada'}
-                  </p>
-                  {docente.direccion && (
-                    <p>
-                      <strong className="text-slate-900">Dirección:</strong> {docente.direccion}
+                  {docente.municipio_procedencia_nombre && (
+                    <p className="text-slate-700 pl-5">
+                      <strong>Municipio:</strong> {docente.municipio_procedencia_nombre}
                     </p>
                   )}
+                  {docente.parroquia_procedencia_nombre && (
+                    <p className="text-slate-700 pl-5">
+                      <strong>Parroquia:</strong> {docente.parroquia_procedencia_nombre}
+                    </p>
+                  )}
+                </div>
+
+                {/* Sub-bloque Residencia */}
+                <div className="p-2.5 bg-emerald-50/60 rounded-lg border border-emerald-100 text-xs space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold text-emerald-900 text-[11px] uppercase tracking-wider">
+                    <Home className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Residencia Actual (Donde Vive)</span>
+                  </div>
+                  <p className="text-slate-700 pl-5">
+                    <strong>Estado:</strong> {docente.estado_nombre || 'Carabobo'}
+                  </p>
+                  <p className="text-slate-700 pl-5">
+                    <strong>Municipio:</strong> {docente.municipio_nombre || 'Puerto Cabello'}
+                  </p>
+                  <p className="text-slate-700 pl-5">
+                    <strong>Parroquia:</strong> {docente.parroquia_nombre || 'No especificada'}
+                  </p>
+                  {docente.direccion && (
+                    <p className="text-slate-700 pl-5">
+                      <strong>Dirección:</strong> {docente.direccion}
+                    </p>
+                  )}
+                </div>
+
+                {/* Contacto */}
+                <div className="pt-1 text-xs text-slate-700 space-y-1.5">
                   {docente.email && (
-                    <p className="flex items-center gap-1 pt-1">
+                    <p className="flex items-center gap-1.5">
                       <Mail className="w-3.5 h-3.5 text-slate-400" />
                       <span>{docente.email}</span>
                     </p>
                   )}
                   {docente.telefono && (
-                    <p className="flex items-center gap-1">
+                    <p className="flex items-center gap-1.5">
                       <Phone className="w-3.5 h-3.5 text-slate-400" />
                       <span>{docente.telefono}</span>
                     </p>

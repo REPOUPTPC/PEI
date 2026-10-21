@@ -178,7 +178,19 @@ export const ReportesView: React.FC<ReportesViewProps> = ({ stats, docentes, onS
   // Exportar datos del reporte actual en CSV
   const handleExportCSV = () => {
     if (reportDocentes.length === 0) return;
-    const headers = ['CEDULA', 'NOMBRE_COMPLETO', 'CARGO', 'PROFESION', 'CARRERA', 'POSTGRADO', 'ESTADO_CENSO'];
+    const headers = [
+      'CEDULA',
+      'NOMBRE_COMPLETO',
+      'CARGO',
+      'PROFESION',
+      'CARRERA',
+      'POSTGRADO',
+      'ESTADO_PROCEDENCIA',
+      'MUNICIPIO_PROCEDENCIA',
+      'ESTADO_RESIDENCIA',
+      'MUNICIPIO_RESIDENCIA',
+      'ESTADO_CENSO',
+    ];
     const rows = [headers.join(',')];
 
     reportDocentes.forEach(d => {
@@ -194,6 +206,10 @@ export const ReportesView: React.FC<ReportesViewProps> = ({ stats, docentes, onS
         `"${(d.tipo_profesion || '').replace(/"/g, '""')}"`,
         `"${(d.carrera_pregrado || '').replace(/"/g, '""')}"`,
         `"${postgrado}"`,
+        `"${(d.estado_procedencia_nombre || '').replace(/"/g, '""')}"`,
+        `"${(d.municipio_procedencia_nombre || '').replace(/"/g, '""')}"`,
+        `"${(d.estado_nombre || '').replace(/"/g, '""')}"`,
+        `"${(d.municipio_nombre || '').replace(/"/g, '""')}"`,
         d.encuestado === 1 ? 'CENSADO' : 'PENDIENTE',
       ].join(','));
     });

@@ -34,6 +34,9 @@ import {
   RefreshCw,
   TrendingUp,
   Compass,
+  MapPin,
+  Home,
+  Navigation,
   Layers,
   Calendar,
   School,
@@ -88,6 +91,9 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
   const [searchPnfDocente, setSearchPnfDocente] = useState('');
   const [searchNivelDocente, setSearchNivelDocente] = useState('');
   const [searchUnivDocente, setSearchUnivDocente] = useState('');
+  const [selectedGeoEstado, setSelectedGeoEstado] = useState<string | null>(null);
+  const [geoTab, setGeoTab] = useState<'comparativa' | 'procedencia' | 'residencia'>('comparativa');
+  const [searchGeoDocente, setSearchGeoDocente] = useState('');
   const [catalogoUniversidades, setCatalogoUniversidades] = useState<UniversidadVenezuela[]>([]);
   const [timedOut, setTimedOut] = useState(false);
 
@@ -111,6 +117,62 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
 
   // Compute effective stats: server stats > computed from docentes > default baseline
   const effectiveStats: ObservatorioStats = useMemo(() => {
+    // Geografía: Procedencia, Residencia y Movilidad
+    const estadoProcMap: Record<string, number> = {};
+    const munResMap: Record<string, number> = {};
+    const estadoResMap: Record<string, number> = {};
+    let geoMismos = 0;
+    let geoDiferentes = 0;
+
+    const docentesCensados = docentes.filter(d => d.encuestado === 1);
+    const poolGeo = docentesCensados.length > 0 ? docentesCensados : docentes;
+
+    poolGeo.forEach(d => {
+      const proc = (d.estado_procedencia_nombre || d.estado_nombre || 'Carabobo').trim();
+      const res = (d.estado_nombre || 'Carabobo').trim();
+      const mun = (d.municipio_nombre || 'Puerto Cabello').trim();
+
+      estadoProcMap[proc] = (estadoProcMap[proc] || 0) + 1;
+      estadoResMap[res] = (estadoResMap[res] || 0) + 1;
+      munResMap[`${mun} (${res})`] = (munResMap[`${mun} (${res})`] || 0) + 1;
+
+      if (proc.toLowerCase() === res.toLowerCase()) {
+        geoMismos++;
+      } else {
+        geoDiferentes++;
+      }
+    });
+
+    const distProcFallback = Object.keys(estadoProcMap)
+      .map(e => ({ estado: e, total: estadoProcMap[e] }))
+      .sort((a, b) => b.total - a.total);
+
+    const distResFallback = Object.keys(munResMap)
+      .map(k => {
+        const parts = k.split(' (');
+        const mun = parts[0];
+        const est = parts[1] ? parts[1].replace(')', '') : 'Carabobo';
+        return { estado: est, municipio: mun, total: munResMap[k] };
+      })
+      .sort((a, b) => b.total - a.total);
+
+    const allGeoEstados = Array.from(new Set([...Object.keys(estadoProcMap), ...Object.keys(estadoResMap)])).sort();
+    const compGeoFallback = allGeoEstados
+      .map(est => ({
+        estado: est,
+        procedencia: estadoProcMap[est] || 0,
+        residencia: estadoResMap[est] || 0,
+      }))
+      .sort((a, b) => b.procedencia + b.residencia - (a.procedencia + a.residencia));
+
+    const totalGeo = geoMismos + geoDiferentes;
+    const tasaMovFallback = {
+      mismos: geoMismos,
+      diferentes: geoDiferentes,
+      pctMovilidad: totalGeo > 0 ? Math.round((geoDiferentes / totalGeo) * 100) : 0,
+      totalConDatos: totalGeo,
+    };
+
     if (stats) {
       const conRepositorio =
         stats.conPublicacionesRepositorio !== undefined
@@ -125,6 +187,10 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
         ...stats,
         conPublicacionesRepositorio: conRepositorio,
         sinPublicacionesRepositorio: sinRepositorio,
+        distribucionProcedencia: stats.distribucionProcedencia || distProcFallback,
+        distribucionResidencia: stats.distribucionResidencia || distResFallback,
+        comparativaGeografica: stats.comparativaGeografica || compGeoFallback,
+        tasaMovilidad: stats.tasaMovilidad || tasaMovFallback,
       };
     }
 
@@ -204,6 +270,10 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
       conPublicacionesArticulos: docentes.filter(d => d.publicaciones_articulos === 1).length,
       conInvestigacionActiva: docentes.filter(d => d.investigacion_en_desarrollo === 1).length,
       lineasInvestigacionTop: [],
+      distribucionProcedencia: distProcFallback,
+      distribucionResidencia: distResFallback,
+      comparativaGeografica: compGeoFallback,
+      tasaMovilidad: tasaMovFallback,
     };
   }, [stats, docentes]);
 
@@ -649,6 +719,100 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
   }, [docentesDeUniversidad, searchUnivDocente]);
 
   // ==========================================
+  // 8. DATA: GEOGRAFÍA NACIONAL (PROCEDENCIA VS. RESIDENCIA)
+  // ==========================================
+  const geoComparativaList = effectiveStats.comparativaGeografica || [];
+  const topGeoComparativa = geoComparativaList.slice(0, 10);
+
+  const dataComparativaGeo = {
+    labels: topGeoComparativa.map(g => g.estado),
+    datasets: [
+      {
+        label: 'Procedencia (Lugar de Origen)',
+        data: topGeoComparativa.map(g => g.procedencia),
+        backgroundColor: '#2563EB',
+        borderRadius: 6,
+        hoverBackgroundColor: '#1D4ED8',
+      },
+      {
+        label: 'Residencia Actual (Donde Viven)',
+        data: topGeoComparativa.map(g => g.residencia),
+        backgroundColor: '#059669',
+        borderRadius: 6,
+        hoverBackgroundColor: '#047857',
+      },
+    ],
+  };
+
+  const geoProcedenciaList = effectiveStats.distribucionProcedencia || [];
+  const topProcedencia = geoProcedenciaList.slice(0, 8);
+  const dataProcedenciaDoughnut = {
+    labels: topProcedencia.map(p => p.estado),
+    datasets: [
+      {
+        data: topProcedencia.map(p => p.total),
+        backgroundColor: [
+          '#2563EB',
+          '#3B82F6',
+          '#0EA5E9',
+          '#06B6D4',
+          '#8B5CF6',
+          '#F59E0B',
+          '#EC4899',
+          '#94A3B8',
+        ],
+        borderWidth: 2,
+        borderColor: '#ffffff',
+        hoverOffset: 8,
+      },
+    ],
+  };
+
+  const geoResidenciaList = effectiveStats.distribucionResidencia || [];
+  const topResidencia = geoResidenciaList.slice(0, 8);
+  const dataResidenciaBar = {
+    labels: topResidencia.map(r => `${r.municipio} (${r.estado})`),
+    datasets: [
+      {
+        label: 'Docentes Residentes',
+        data: topResidencia.map(r => r.total),
+        backgroundColor: '#059669',
+        borderRadius: 6,
+        hoverBackgroundColor: '#047857',
+      },
+    ],
+  };
+
+  // Docentes filtrados por estado para el panel geográfico interactivo
+  const docentesEnGeo = useMemo(() => {
+    if (!selectedGeoEstado) return [];
+    return docentes.filter(d => {
+      const proc = (d.estado_procedencia_nombre || d.estado_nombre || 'Carabobo').toLowerCase();
+      const res = (d.estado_nombre || 'Carabobo').toLowerCase();
+      const target = selectedGeoEstado.toLowerCase();
+
+      let matches = false;
+      if (geoTab === 'procedencia') matches = proc === target;
+      else if (geoTab === 'residencia') matches = res === target;
+      else matches = proc === target || res === target;
+
+      if (!matches) return false;
+
+      if (searchGeoDocente.trim()) {
+        const q = searchGeoDocente.toLowerCase();
+        const matchName = (d.nombre_completo || '').toLowerCase().includes(q);
+        const matchCed = (d.cedula || '').toLowerCase().includes(q);
+        const matchCarr = (d.carrera_pregrado || '').toLowerCase().includes(q);
+        const matchMun = (d.municipio_nombre || '').toLowerCase().includes(q);
+        const matchMunProc = (d.municipio_procedencia_nombre || '').toLowerCase().includes(q);
+        if (!matchName && !matchCed && !matchCarr && !matchMun && !matchMunProc) return false;
+      }
+
+      return true;
+    });
+  }, [docentes, selectedGeoEstado, geoTab, searchGeoDocente]);
+
+  // ==========================================
   // FILTERING LOGIC
   // ==========================================
 
@@ -721,16 +885,18 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
     });
   }, [docentes, selectedNivel, searchNivelDocente]);
 
-  const hasAnyFilter = Boolean(selectedProfesion || selectedRama || selectedPnf || selectedNivel);
+  const hasAnyFilter = Boolean(selectedProfesion || selectedRama || selectedPnf || selectedNivel || selectedGeoEstado);
 
   const resetAllFilters = () => {
     setSelectedProfesion(null);
     setSelectedRama(null);
     setSelectedPnf(null);
     setSelectedNivel(null);
+    setSelectedGeoEstado(null);
     setSearchDocente('');
     setSearchPnfDocente('');
     setSearchNivelDocente('');
+    setSearchGeoDocente('');
   };
 
   return (
@@ -871,6 +1037,15 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
               <span className="inline-flex items-center gap-1 bg-white border border-purple-300 text-purple-900 text-xs px-2.5 py-1 rounded-lg font-semibold shadow-2xs">
                 <span>Nivel: {selectedNivel}</span>
                 <button onClick={() => setSelectedNivel(null)} className="hover:text-rose-600 font-bold ml-1">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </span>
+            )}
+
+            {selectedGeoEstado && (
+              <span className="inline-flex items-center gap-1 bg-white border border-emerald-300 text-emerald-900 text-xs px-2.5 py-1 rounded-lg font-semibold shadow-2xs">
+                <span>Estado: {selectedGeoEstado}</span>
+                <button onClick={() => setSelectedGeoEstado(null)} className="hover:text-rose-600 font-bold ml-1">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </span>
@@ -2290,6 +2465,444 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* SECCIÓN: GEOGRAFÍA NACIONAL - PROCEDENCIA VS. RESIDENCIA ACTUAL */}
+      <section id="seccion-geografia" className="card-white p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 uppercase tracking-wider mb-1">
+              <Compass className="w-4 h-4 text-emerald-600" />
+              <span>Geografía Nacional y Movilidad Territorial</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900">
+              Procedencia (Lugar de Origen) vs. Residencia Actual
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Análisis comparativo entre el lugar de origen en Venezuela del cuerpo docente y su lugar de residencia actual.
+            </p>
+          </div>
+
+          {/* Selector de Pestañas / Modos de visualización */}
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold self-start md:self-auto">
+            <button
+              onClick={() => setGeoTab('comparativa')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                geoTab === 'comparativa'
+                  ? 'bg-white text-[#0B4D94] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Comparativa
+            </button>
+            <button
+              onClick={() => setGeoTab('procedencia')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                geoTab === 'procedencia'
+                  ? 'bg-white text-blue-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Procedencia (Origen)
+            </button>
+            <button
+              onClick={() => setGeoTab('residencia')}
+              className={`px-3 py-1.5 rounded-lg transition-all ${
+                geoTab === 'residencia'
+                  ? 'bg-white text-emerald-700 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Residencia Actual
+            </button>
+          </div>
+        </div>
+
+        {/* Tarjetas KPI de Geografía Territorial */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-blue-50/70 p-4 rounded-xl border border-blue-100">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-blue-900 uppercase tracking-wider">Estados de Origen</span>
+              <Navigation className="w-4 h-4 text-blue-600" />
+            </div>
+            <p className="text-2xl font-extrabold text-blue-900 mt-1">
+              {(effectiveStats.distribucionProcedencia || []).length}
+            </p>
+            <p className="text-[11px] text-blue-700 mt-0.5">
+              Diversidad geográfica nacional representada
+            </p>
+          </div>
+
+          <div className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-100">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-emerald-900 uppercase tracking-wider">Residencia Local</span>
+              <Home className="w-4 h-4 text-emerald-600" />
+            </div>
+            <p className="text-2xl font-extrabold text-emerald-900 mt-1">
+              {(() => {
+                const carabobo = (effectiveStats.comparativaGeografica || []).find(c => c.estado.toLowerCase() === 'carabobo');
+                const total = effectiveStats.totalEncuestados || 1;
+                const count = carabobo ? carabobo.residencia : 0;
+                const pct = Math.round((count / Math.max(1, total)) * 100);
+                return `${count} (${pct}%)`;
+              })()}
+            </p>
+            <p className="text-[11px] text-emerald-700 mt-0.5">
+              Habitan en Carabobo (Puerto Cabello / eje costero)
+            </p>
+          </div>
+
+          <div className="bg-purple-50/70 p-4 rounded-xl border border-purple-100">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-purple-900 uppercase tracking-wider">Movilidad Territorial</span>
+              <TrendingUp className="w-4 h-4 text-purple-600" />
+            </div>
+            <p className="text-2xl font-extrabold text-purple-900 mt-1">
+              {effectiveStats.tasaMovilidad?.pctMovilidad || 0}%
+            </p>
+            <p className="text-[11px] text-purple-700 mt-0.5">
+              {effectiveStats.tasaMovilidad?.diferentes || 0} docentes originarios de otros estados
+            </p>
+          </div>
+
+          <div className="bg-amber-50/70 p-4 rounded-xl border border-amber-100">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-900 uppercase tracking-wider">Top Origen Foráneo</span>
+              <MapPin className="w-4 h-4 text-amber-600" />
+            </div>
+            <p className="text-2xl font-extrabold text-amber-900 mt-1 truncate">
+              {(() => {
+                const foraneos = (effectiveStats.distribucionProcedencia || []).filter(p => p.estado.toLowerCase() !== 'carabobo');
+                return foraneos.length > 0 ? `${foraneos[0].estado} (${foraneos[0].total})` : 'N/D';
+              })()}
+            </p>
+            <p className="text-[11px] text-amber-700 mt-0.5">
+              Mayor afluencia de procedencia fuera de Carabobo
+            </p>
+          </div>
+        </div>
+
+        {/* Visualización Gráfica según Pestaña Activa */}
+        {geoTab === 'comparativa' && (
+          <div className="p-5 bg-slate-50/50 rounded-2xl border border-slate-200 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span>Balance Comparativo: Procedencia vs. Residencia por Estado</span>
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Haz clic en cualquier barra o botón de estado para ver la lista de docentes
+                </p>
+              </div>
+              <div className="flex items-center gap-4 text-xs font-medium">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-sm bg-[#2563EB]"></span>
+                  <span>Procedencia (Origen)</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-sm bg-[#059669]"></span>
+                  <span>Residencia Actual</span>
+                </span>
+              </div>
+            </div>
+
+            <div className="h-72 cursor-pointer">
+              <Bar
+                data={dataComparativaGeo}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      callbacks: {
+                        label: ctx => ` ${ctx.dataset.label}: ${ctx.raw} docentes`,
+                      },
+                    },
+                  },
+                  scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { ticks: { font: { size: 10 } } },
+                  },
+                  onClick: (evt, elements) => {
+                    if (elements.length > 0) {
+                      const el = elements[0];
+                      const est = dataComparativaGeo.labels[el.index];
+                      if (est) setSelectedGeoEstado(est === selectedGeoEstado ? null : est);
+                    }
+                  },
+                }}
+              />
+            </div>
+
+            {/* Quick State Chips */}
+            <div className="flex flex-wrap items-center gap-2 pt-2">
+              <span className="text-xs font-bold text-slate-500">Explorar por Estado:</span>
+              {(effectiveStats.comparativaGeografica || []).slice(0, 8).map(c => (
+                <button
+                  key={c.estado}
+                  type="button"
+                  onClick={() => setSelectedGeoEstado(selectedGeoEstado === c.estado ? null : c.estado)}
+                  className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-all ${
+                    selectedGeoEstado === c.estado
+                      ? 'bg-[#0B4D94] text-white border-[#0B4D94] shadow-xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <span>{c.estado}</span>
+                  <span className="ml-1 text-[10px] opacity-75">
+                    (P:{c.procedencia} / R:{c.residencia})
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {geoTab === 'procedencia' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center p-5 bg-slate-50/50 rounded-2xl border border-slate-200">
+            <div className="lg:col-span-5 flex flex-col items-center">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 text-center">
+                Distribución de Estados de Origen
+              </h4>
+              <div className="w-full max-w-xs h-64 relative flex items-center justify-center">
+                <Doughnut
+                  data={dataProcedenciaDoughnut}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
+                      tooltip: {
+                        callbacks: {
+                          label: ctx => ` ${ctx.label}: ${ctx.raw} docentes (${Math.round(((ctx.raw as number) / Math.max(1, effectiveStats.totalEncuestados || 1)) * 100)}%)`,
+                        },
+                      },
+                    },
+                    cutout: '60%',
+                    onClick: (evt, elements) => {
+                      if (elements.length > 0) {
+                        const el = elements[0];
+                        const est = dataProcedenciaDoughnut.labels[el.index];
+                        if (est) setSelectedGeoEstado(est === selectedGeoEstado ? null : est);
+                      }
+                    },
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="lg:col-span-7 space-y-3">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Ranking de Estados de Procedencia (Nacimiento / Origen)
+              </h4>
+              <div className="space-y-2">
+                {(effectiveStats.distribucionProcedencia || []).slice(0, 6).map((item, idx) => {
+                  const pct = Math.round((item.total / Math.max(1, effectiveStats.totalEncuestados || 1)) * 100);
+                  const isSelected = selectedGeoEstado === item.estado;
+                  return (
+                    <div
+                      key={item.estado}
+                      onClick={() => setSelectedGeoEstado(isSelected ? null : item.estado)}
+                      className={`p-2.5 rounded-xl border transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-blue-100/70 border-blue-300'
+                          : 'bg-white border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                          <span className="w-5 h-5 rounded-full bg-blue-100 text-[#0B4D94] text-[10px] flex items-center justify-center font-bold">
+                            {idx + 1}
+                          </span>
+                          <span>{item.estado}</span>
+                        </span>
+                        <span className="font-semibold text-slate-600">
+                          {item.total} docentes ({pct}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+                        <div
+                          className="bg-blue-600 h-1.5 rounded-full"
+                          style={{ width: `${pct}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {geoTab === 'residencia' && (
+          <div className="p-5 bg-slate-50/50 rounded-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900">
+                  Distribución por Municipio y Estado de Residencia Actual
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Lugares donde habita actualmente el personal docente censado
+                </p>
+              </div>
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                Residencia
+              </span>
+            </div>
+
+            <div className="h-64 cursor-pointer">
+              <Bar
+                data={dataResidenciaBar}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      callbacks: {
+                        label: ctx => ` ${ctx.raw} docentes residen aquí`,
+                      },
+                    },
+                  },
+                  scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { ticks: { font: { size: 10 } } },
+                  },
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Explorador Nominal por Estado Seleccionado */}
+        {selectedGeoEstado && (
+          <div className="p-5 bg-gradient-to-br from-blue-50/60 to-emerald-50/40 border border-blue-200 rounded-2xl space-y-4 animate-fade-in">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-blue-200/70 pb-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-blue-900">
+                    Docentes Vinculados a {selectedGeoEstado}
+                  </span>
+                  <span className="bg-[#0B4D94] text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {docentesEnGeo.length}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Docentes originarios o residentes en el estado de {selectedGeoEstado}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre, cédula o carrera..."
+                    value={searchGeoDocente}
+                    onChange={e => setSearchGeoDocente(e.target.value)}
+                    className="text-xs bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-[#0B4D94] w-56"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedGeoEstado(null);
+                    setSearchGeoDocente('');
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg transition-colors border border-slate-200"
+                  title="Cerrar detalle"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Nominal Grid of Docentes */}
+            {docentesEnGeo.length === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-400">
+                No se encontraron docentes con ese criterio de búsqueda en {selectedGeoEstado}.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {docentesEnGeo.map(d => {
+                  const estadoProc = d.estado_procedencia_nombre || d.estado_nombre || 'N/D';
+                  const munProc = d.municipio_procedencia_nombre || '';
+                  const estadoRes = d.estado_nombre || 'Carabobo';
+                  const munRes = d.municipio_nombre || 'Puerto Cabello';
+                  const esForaneo = estadoProc.toLowerCase() !== estadoRes.toLowerCase();
+
+                  return (
+                    <div
+                      key={d.cedula}
+                      className="p-3.5 bg-white border border-blue-100 hover:border-blue-300 rounded-xl shadow-2xs transition-all flex flex-col justify-between space-y-3"
+                    >
+                      <div className="flex items-start gap-3">
+                        {d.foto_url ? (
+                          <img
+                            src={d.foto_url}
+                            alt={d.nombre_completo}
+                            className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-blue-100 text-[#0B4D94] font-bold text-xs flex items-center justify-center shrink-0">
+                            {d.nombre_completo.slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <h5 className="font-bold text-xs text-slate-900 truncate">
+                            {d.nombre_completo}
+                          </h5>
+                          <p className="text-[11px] text-slate-500 font-mono">
+                            C.I. {d.cedula}
+                          </p>
+                          <div className="text-[11px] text-[#0B4D94] font-medium truncate mt-0.5">
+                            {d.carrera_pregrado || d.tipo_profesion || 'Docente'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Trayectoria Geográfica (Origen -> Residencia) */}
+                      <div className="p-2 bg-slate-50 rounded-lg border border-slate-100 text-[11px] space-y-1">
+                        <div className="flex items-center gap-1.5 text-blue-900">
+                          <Compass className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                          <span className="truncate">
+                            <strong>Origen:</strong> {estadoProc} {munProc ? `(${munProc})` : ''}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-emerald-900">
+                          <Home className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span className="truncate">
+                            <strong>Reside:</strong> {estadoRes} ({munRes})
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                        <span
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                            esForaneo
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-emerald-100 text-emerald-800'
+                          }`}
+                        >
+                          {esForaneo ? 'Origen Foráneo' : 'Residente Local'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onSelectDocente(d)}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0B4D94] hover:text-blue-800 hover:underline"
+                        >
+                          <span>Ver Ficha</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
