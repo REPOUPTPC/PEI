@@ -24,6 +24,7 @@ import {
   Search,
   X,
   Building2,
+  ExternalLink,
 } from 'lucide-react';
 import { AdminPermisos, EncuestadorPermisos, Usuario, UniversidadVenezuela } from '@/lib/types';
 import { useToast } from './Toast';
@@ -95,10 +96,13 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
   // Form fields for Univ Modal
   const [univNombre, setUnivNombre] = useState('');
   const [univSiglas, setUnivSiglas] = useState('');
+  const [univCodigo, setUnivCodigo] = useState('');
   const [univTipo, setUnivTipo] = useState<'Pública' | 'Privada'>('Pública');
   const [univSubtipo, setUnivSubtipo] = useState('Experimental');
   const [univSede, setUnivSede] = useState('');
   const [univEstado, setUnivEstado] = useState('');
+  const [univLogoUrl, setUnivLogoUrl] = useState('');
+  const [univFuenteUrl, setUnivFuenteUrl] = useState('');
 
   const loadUniversidades = async () => {
     setLoadingUnivs(true);
@@ -390,10 +394,13 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
     setEditingUniv(null);
     setUnivNombre('');
     setUnivSiglas('');
+    setUnivCodigo('');
     setUnivTipo('Pública');
     setUnivSubtipo('Experimental');
     setUnivSede('');
     setUnivEstado('');
+    setUnivLogoUrl('');
+    setUnivFuenteUrl('');
     setModalUnivOpen(true);
   };
 
@@ -401,10 +408,13 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
     setEditingUniv(u);
     setUnivNombre(u.nombre);
     setUnivSiglas(u.siglas || '');
+    setUnivCodigo(u.codigo || '');
     setUnivTipo((u.tipo === 'Privada' ? 'Privada' : 'Pública') as 'Pública' | 'Privada');
     setUnivSubtipo(u.subtipo || 'General');
     setUnivSede(u.sede_principal || '');
     setUnivEstado(u.estado || '');
+    setUnivLogoUrl(u.logo_url || '');
+    setUnivFuenteUrl(u.fuente_url || '');
     setModalUnivOpen(true);
   };
 
@@ -425,10 +435,13 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
           id: editingUniv?.id,
           nombre: univNombre.trim(),
           siglas: univSiglas.trim().toUpperCase() || null,
+          codigo: univCodigo.trim() || null,
           tipo: univTipo,
           subtipo: univSubtipo.trim() || 'General',
           sede_principal: univSede.trim() || null,
           estado: univEstado.trim() || null,
+          logo_url: univLogoUrl.trim() || null,
+          fuente_url: univFuenteUrl.trim() || null,
         }),
       });
 
@@ -474,7 +487,7 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
   };
 
   const handleResetUniversidades = async () => {
-    if (!window.confirm('¿Desea restaurar el catálogo oficial de 59 universidades de Venezuela?')) {
+    if (!window.confirm('¿Desea restaurar el catálogo oficial de universidades e IEU de Venezuela (OPSU / LOEU)?')) {
       return;
     }
 
@@ -487,7 +500,7 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
       });
       const data = await res.json();
       if (data.success) {
-        showToast('success', 'Catálogo Restaurado', data.message || 'Se restauraron 59 universidades.');
+        showToast('success', 'Catálogo Restaurado', data.message || 'Se restauraron las instituciones oficiales.');
         await loadUniversidades();
       } else {
         showToast('error', 'Error al restaurar', data.error);
@@ -507,9 +520,10 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
       const q = searchUniv.toLowerCase().trim();
       const matchNom = u.nombre.toLowerCase().includes(q);
       const matchSig = (u.siglas || '').toLowerCase().includes(q);
+      const matchCod = (u.codigo || '').toLowerCase().includes(q);
       const matchSub = (u.subtipo || '').toLowerCase().includes(q);
       const matchEst = (u.estado || '').toLowerCase().includes(q);
-      return matchNom || matchSig || matchSub || matchEst;
+      return matchNom || matchSig || matchCod || matchSub || matchEst;
     }
     return true;
   });
@@ -981,14 +995,14 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-sm text-slate-900">
-                  Catálogo Oficial de Universidades de Venezuela
+                  Catálogo Oficial de Universidades e IEU de Venezuela
                 </h3>
                 <span className="bg-blue-100 text-[#0B4D94] border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  {universidades.length} Instituciones
+                  {universidades.length} Instituciones Oficiales (OPSU / LOEU)
                 </span>
               </div>
               <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
-                Gestión integral (CRUD) del catálogo de universidades nacionales para el censo y el cálculo automático de formación pública vs. privada en el Observatorio.
+                Gestión integral (CRUD) del catálogo de universidades e institutos universitarios según el Libro de Oportunidades de Estudio Universitario (LOEU / OPSU). Permite la selección en el censo y clasifica automáticamente la formación como Pública o Privada en el Observatorio.
               </p>
             </div>
           </div>
@@ -999,7 +1013,7 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
               onClick={handleResetUniversidades}
               disabled={restoringUnivs}
               className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold px-3 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
-              title="Restaura la lista original de 59 universidades"
+              title="Restaura el catálogo oficial de instituciones de Venezuela (OPSU LOEU)"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-[#0B4D94] ${restoringUnivs ? 'animate-spin' : ''}`} />
               <span>Restaurar Catálogo Base</span>
@@ -1058,7 +1072,7 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
             <input
               type="text"
-              placeholder="Buscar por nombre, sigla o estado..."
+              placeholder="Buscar por nombre, sigla, código o estado..."
               value={searchUniv}
               onChange={e => setSearchUniv(e.target.value)}
               className="w-full text-xs bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-[#0B4D94]"
@@ -1097,12 +1111,52 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
                 filteredUniversidades.map(u => (
                   <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-2.5 px-3 font-semibold text-slate-900">
-                      {u.nombre}
+                      <div className="flex items-center gap-2.5">
+                        {u.logo_url ? (
+                          <img
+                            src={u.logo_url}
+                            alt=""
+                            className="w-7 h-7 object-contain rounded bg-white border border-slate-200 p-0.5 shrink-0"
+                            loading="lazy"
+                            onError={e => {
+                              (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-7 h-7 rounded bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 text-slate-400">
+                            <School className="w-4 h-4 text-slate-400" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="font-semibold text-slate-900 leading-snug">
+                            {u.nombre}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {u.codigo && (
+                              <span className="font-mono text-[9px] bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded border border-slate-200">
+                                Cód: {u.codigo}
+                              </span>
+                            )}
+                            {u.fuente_url && (
+                              <a
+                                href={u.fuente_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-0.5 text-[10px] text-[#0B4D94] hover:underline"
+                                title="Ver ficha en el Libro de Oportunidades de Estudio (OPSU LOEU)"
+                              >
+                                <span>Ficha LOEU</span>
+                                <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </td>
-                    <td className="py-2.5 px-3 font-mono text-slate-600 font-bold">
+                    <td className="py-2.5 px-3 font-mono text-slate-600 font-bold whitespace-nowrap">
                       {u.siglas || '-'}
                     </td>
-                    <td className="py-2.5 px-3">
+                    <td className="py-2.5 px-3 whitespace-nowrap">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
                         u.tipo === 'Privada'
                           ? 'bg-purple-100 text-purple-800 border border-purple-200'
@@ -1111,7 +1165,7 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
                         {u.tipo}
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 text-slate-500">
+                    <td className="py-2.5 px-3 text-slate-500 whitespace-nowrap">
                       {u.subtipo || '-'}
                     </td>
                     <td className="py-2.5 px-3 text-slate-500">
@@ -1384,7 +1438,7 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Siglas</label>
                   <input
@@ -1397,7 +1451,18 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Régimen Institucional *</label>
+                  <label className="block font-bold text-slate-700 mb-1">Código LOEU</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. 0001, 0014"
+                    value={univCodigo}
+                    onChange={e => setUnivCodigo(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg p-2.5 font-mono focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Régimen *</label>
                   <select
                     value={univTipo}
                     onChange={e => setUnivTipo(e.target.value as 'Pública' | 'Privada')}
@@ -1442,6 +1507,30 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
                   onChange={e => setUnivEstado(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">URL Logotipo</label>
+                  <input
+                    type="url"
+                    placeholder="http://loeu.opsu.gob.ve/.../logo.jpg"
+                    value={univLogoUrl}
+                    onChange={e => setUnivLogoUrl(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg p-2.5 text-[11px] focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">URL Ficha Oficial LOEU</label>
+                  <input
+                    type="url"
+                    placeholder="http://loeu.opsu.gob.ve/.../consultar.php?id=..."
+                    value={univFuenteUrl}
+                    onChange={e => setUnivFuenteUrl(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg p-2.5 text-[11px] focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">

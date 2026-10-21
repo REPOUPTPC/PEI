@@ -54,10 +54,15 @@ export interface UniversidadVenezuela {
   id: number;
   nombre: string;
   siglas?: string;
+  codigo?: string;
   tipo: 'Pública' | 'Privada' | string;
   subtipo?: string;
   sede_principal?: string;
   estado?: string;
+  logo_url?: string;
+  fachada_url?: string;
+  fuente_url?: string;
+  created_at?: string;
 }
 
 export interface Estado {

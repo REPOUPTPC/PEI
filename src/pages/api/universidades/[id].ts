@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     if (req.method === 'GET') {
       const result = await db.execute({
-        sql: 'SELECT id, nombre, siglas, tipo, subtipo, sede_principal, estado FROM universidades_venezuela WHERE id = ?',
+        sql: 'SELECT id, nombre, siglas, codigo, tipo, subtipo, sede_principal, estado, logo_url, fachada_url, fuente_url, created_at FROM universidades_venezuela WHERE id = ?',
         args: [numId],
       });
 
@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === 'PUT') {
-      const { nombre, siglas, tipo, subtipo, sede_principal, estado } = req.body;
+      const { nombre, siglas, codigo, tipo, subtipo, sede_principal, estado, logo_url, fachada_url, fuente_url } = req.body;
 
       if (!nombre) {
         return res.status(400).json({ error: 'Nombre de universidad requerido' });
@@ -34,14 +34,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const cleanTipo = tipo === 'Privada' ? 'Privada' : 'Pública';
 
       await db.execute({
-        sql: `UPDATE universidades_venezuela SET nombre = ?, siglas = ?, tipo = ?, subtipo = ?, sede_principal = ?, estado = ? WHERE id = ?`,
+        sql: `UPDATE universidades_venezuela SET nombre = ?, siglas = ?, codigo = ?, tipo = ?, subtipo = ?, sede_principal = ?, estado = ?, logo_url = ?, fachada_url = ?, fuente_url = ? WHERE id = ?`,
         args: [
           nombre.trim(),
           siglas ? siglas.trim().toUpperCase() : null,
+          codigo ? codigo.trim().toUpperCase() : (siglas ? siglas.trim().toUpperCase() : null),
           cleanTipo,
           subtipo ? subtipo.trim() : null,
           sede_principal ? sede_principal.trim() : null,
           estado ? estado.trim() : null,
+          logo_url ? logo_url.trim() : null,
+          fachada_url ? fachada_url.trim() : null,
+          fuente_url ? fuente_url.trim() : null,
           numId,
         ],
       });

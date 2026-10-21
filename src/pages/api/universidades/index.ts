@@ -10,19 +10,36 @@ async function ensureUniversidadesTable() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nombre TEXT NOT NULL UNIQUE,
         siglas TEXT,
+        codigo TEXT,
         tipo TEXT NOT NULL,
         subtipo TEXT,
         sede_principal TEXT,
         estado TEXT,
+        logo_url TEXT,
+        fachada_url TEXT,
+        fuente_url TEXT,
         created_at TEXT DEFAULT (datetime('now'))
       );
     `);
+
+    // Añadir columnas si ya existía sin ellas
+    const colsToAdd = [
+      'ALTER TABLE universidades_venezuela ADD COLUMN codigo TEXT;',
+      'ALTER TABLE universidades_venezuela ADD COLUMN logo_url TEXT;',
+      'ALTER TABLE universidades_venezuela ADD COLUMN fachada_url TEXT;',
+      'ALTER TABLE universidades_venezuela ADD COLUMN fuente_url TEXT;',
+    ];
+    for (const alterSql of colsToAdd) {
+      try {
+        await db.execute(alterSql);
+      } catch {}
+    }
 
     // Comprobar si ya contiene datos
     const checkCount = await db.execute('SELECT COUNT(*) as c FROM universidades_venezuela');
     const count = Number(checkCount.rows[0]?.c || 0);
 
-    if (count === 0) {
+    if (count < 100) {
       const sqlPath = path.resolve('sql/universidades_venezuela.sql');
       if (fs.existsSync(sqlPath)) {
         const sql = fs.readFileSync(sqlPath, 'utf8');
@@ -36,11 +53,12 @@ async function ensureUniversidadesTable() {
             (trimmed.startsWith('(') && trimmed.endsWith(');'))
           ) {
             const clean = trimmed.replace(/^\(/, '').replace(/\)[;,]$/, '');
-            const parts = clean.split(',').map(p => p.trim().replace(/^'/, '').replace(/'$/, ''));
-            if (parts.length >= 6) {
+            const tokens = clean.match(/(NULL|'(?:''|[^'])*')/g);
+            if (tokens && tokens.length >= 10) {
+              const parts = tokens.map(t => (t === 'NULL' ? null : t.slice(1, -1).replace(/''/g, "'")));
               inserts.push({
-                sql: `INSERT OR REPLACE INTO universidades_venezuela (nombre, siglas, tipo, subtipo, sede_principal, estado) VALUES (?, ?, ?, ?, ?, ?)`,
-                args: [parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]],
+                sql: `INSERT OR REPLACE INTO universidades_venezuela (nombre, siglas, codigo, tipo, subtipo, sede_principal, estado, logo_url, fachada_url, fuente_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                args: [parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7], parts[8], parts[9]],
               });
             }
           }
@@ -65,7 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method === 'GET') {
       const { q, tipo } = req.query;
 
-      let sql = 'SELECT id, nombre, siglas, tipo, subtipo, sede_principal, estado, created_at FROM universidades_venezuela WHERE 1=1';
+      let sql = 'SELECT id, nombre, siglas, codigo, tipo, subtipo, sede_principal, estado, logo_url, fachada_url, fuente_url, created_at FROM universidades_venezuela WHERE 1=1';
       const args: any[] = [];
 
       if (tipo && typeof tipo === 'string' && tipo.trim().length > 0) {
@@ -75,8 +93,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (q && typeof q === 'string' && q.trim().length > 0) {
         const term = `%${q.trim()}%`;
-        sql += ' AND (nombre LIKE ? OR siglas LIKE ? OR subtipo LIKE ? OR estado LIKE ?)';
-        args.push(term, term, term, term);
+        sql += ' AND (nombre LIKE ? OR siglas LIKE ? OR codigo LIKE ? OR subtipo LIKE ? OR estado LIKE ?)';
+        args.push(term, term, term, term, term);
       }
 
       sql += ' ORDER BY tipo ASC, nombre ASC';
@@ -87,7 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // POST: Crear nueva universidad o restaurar catálogo
     if (req.method === 'POST') {
-      const { action, nombre, siglas, tipo, subtipo, sede_principal, estado } = req.body;
+      const { action, nombre, siglas, codigo, tipo, subtipo, sede_principal, estado, logo_url, fachada_url, fuente_url } = req.body;
 
       // Acción especial de restauración del catálogo oficial
       if (action === 'reset') {
@@ -108,11 +126,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             (trimmed.startsWith('(') && trimmed.endsWith(');'))
           ) {
             const clean = trimmed.replace(/^\(/, '').replace(/\)[;,]$/, '');
-            const parts = clean.split(',').map(p => p.trim().replace(/^'/, '').replace(/'$/, ''));
-            if (parts.length >= 6) {
+            const tokens = clean.match(/(NULL|'(?:''|[^'])*')/g);
+            if (tokens && tokens.length >= 10) {
+              const parts = tokens.map(t => (t === 'NULL' ? null : t.slice(1, -1).replace(/''/g, "'")));
               inserts.push({
-                sql: `INSERT INTO universidades_venezuela (nombre, siglas, tipo, subtipo, sede_principal, estado) VALUES (?, ?, ?, ?, ?, ?)`,
-                args: [parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]],
+                sql: `INSERT OR REPLACE INTO universidades_venezuela (nombre, siglas, codigo, tipo, subtipo, sede_principal, estado, logo_url, fachada_url, fuente_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                args: [parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], parts[6], parts[7], parts[8], parts[9]],
               });
             }
           }
@@ -125,7 +144,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         return res.status(200).json({
           success: true,
-          message: `Catálogo oficial restaurado con éxito (${inserts.length} universidades)`,
+          message: `Catálogo oficial consolidado restaurado con éxito (${inserts.length} instituciones)`,
         });
       }
 
@@ -152,14 +171,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const insert = await db.execute({
-        sql: `INSERT INTO universidades_venezuela (nombre, siglas, tipo, subtipo, sede_principal, estado) VALUES (?, ?, ?, ?, ?, ?)`,
+        sql: `INSERT INTO universidades_venezuela (nombre, siglas, codigo, tipo, subtipo, sede_principal, estado, logo_url, fachada_url, fuente_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
           cleanNombre,
           siglas ? siglas.trim().toUpperCase() : null,
+          codigo ? codigo.trim().toUpperCase() : (siglas ? siglas.trim().toUpperCase() : null),
           cleanTipo,
           subtipo ? subtipo.trim() : 'General',
           sede_principal ? sede_principal.trim() : null,
           estado ? estado.trim() : null,
+          logo_url ? logo_url.trim() : null,
+          fachada_url ? fachada_url.trim() : null,
+          fuente_url ? fuente_url.trim() : null,
         ],
       });
 
@@ -173,10 +196,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           id: newId,
           nombre: cleanNombre,
           siglas: siglas ? siglas.trim().toUpperCase() : null,
+          codigo: codigo ? codigo.trim().toUpperCase() : (siglas ? siglas.trim().toUpperCase() : null),
           tipo: cleanTipo,
           subtipo: subtipo ? subtipo.trim() : 'General',
           sede_principal: sede_principal ? sede_principal.trim() : null,
           estado: estado ? estado.trim() : null,
+          logo_url: logo_url || null,
+          fachada_url: fachada_url || null,
+          fuente_url: fuente_url || null,
         },
         isNew: true,
         message: 'Universidad registrada exitosamente en el sistema',
@@ -185,7 +212,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // PUT: Actualizar universidad
     if (req.method === 'PUT') {
-      const { id, nombre, siglas, tipo, subtipo, sede_principal, estado } = req.body;
+      const { id, nombre, siglas, codigo, tipo, subtipo, sede_principal, estado, logo_url, fachada_url, fuente_url } = req.body;
 
       if (!id || !nombre) {
         return res.status(400).json({ error: 'ID y Nombre de universidad requeridos' });
@@ -194,14 +221,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const cleanTipo = tipo === 'Privada' ? 'Privada' : 'Pública';
 
       await db.execute({
-        sql: `UPDATE universidades_venezuela SET nombre = ?, siglas = ?, tipo = ?, subtipo = ?, sede_principal = ?, estado = ? WHERE id = ?`,
+        sql: `UPDATE universidades_venezuela SET nombre = ?, siglas = ?, codigo = ?, tipo = ?, subtipo = ?, sede_principal = ?, estado = ?, logo_url = ?, fachada_url = ?, fuente_url = ? WHERE id = ?`,
         args: [
           nombre.trim(),
           siglas ? siglas.trim().toUpperCase() : null,
+          codigo ? codigo.trim().toUpperCase() : (siglas ? siglas.trim().toUpperCase() : null),
           cleanTipo,
           subtipo ? subtipo.trim() : null,
           sede_principal ? sede_principal.trim() : null,
           estado ? estado.trim() : null,
+          logo_url ? logo_url.trim() : null,
+          fachada_url ? fachada_url.trim() : null,
+          fuente_url ? fuente_url.trim() : null,
           Number(id),
         ],
       });
