@@ -68,6 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           doctorados = NULL,
           componente_docente = 0,
           usuario_recitven = 0,
+          publicaciones_repositorio = 0,
           colegiado = 0,
           nombre_colegio = NULL,
           numero_colegio = NULL,

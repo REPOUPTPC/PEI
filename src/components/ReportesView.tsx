@@ -40,6 +40,7 @@ export const ReportesView: React.FC<ReportesViewProps> = ({ stats, docentes, onS
         return docentes.filter(
           d =>
             d.usuario_recitven === 1 ||
+            d.publicaciones_repositorio === 1 ||
             d.publicaciones_libros === 1 ||
             d.publicaciones_articulos === 1 ||
             d.investigacion_en_desarrollo === 1
@@ -118,7 +119,7 @@ export const ReportesView: React.FC<ReportesViewProps> = ({ stats, docentes, onS
           pnfStr = '';
         }
 
-        const pubStr = `${d.usuario_recitven === 1 ? 'RECITVEN' : ''} ${d.publicaciones_libros === 1 ? '• Libros' : ''} ${d.publicaciones_articulos === 1 ? '• Artículos' : ''}`.trim() || 'N/D';
+        const pubStr = `${d.usuario_recitven === 1 ? 'RECITVEN' : ''} ${d.publicaciones_repositorio === 1 ? '• Repositorio UPTPC' : ''} ${d.publicaciones_libros === 1 ? '• Libros' : ''} ${d.publicaciones_articulos === 1 ? '• Artículos' : ''}`.trim() || 'N/D';
 
         return [
           idx + 1,

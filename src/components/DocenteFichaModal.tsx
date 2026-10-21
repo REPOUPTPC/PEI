@@ -164,6 +164,7 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
         ['Componente Docente:', docente.componente_docente === 1 ? 'SÍ posee componente docente' : 'NO posee'],
         ['Gremio / Colegiatura:', docente.colegiado === 1 ? `SÍ (${docente.nombre_colegio || 'Colegio Profesional'}${docente.numero_colegio ? ` Nro: ${docente.numero_colegio}` : ''})` : 'NO colegiado'],
         ['Registro RECITVEN:', docente.usuario_recitven === 1 ? 'SÍ está inscrito en RECITVEN' : 'NO inscrito'],
+        ['Publicaciones Repositorio UPTPC:', docente.publicaciones_repositorio === 1 ? 'SÍ ha publicado (repositorio.uptpc.edu.ve)' : 'NO ha publicado'],
         ['PNFs en UPTPC:', pnfs.length > 0 ? pnfs.join(', ') : 'No especificado'],
         ['Conoce Líneas de Inv. del Programa:', docente.conoce_lineas_pnf === 1 ? `SÍ${docente.lineas_pnf_detalle ? ` • ${docente.lineas_pnf_detalle}` : ''}` : 'NO'],
         ['Asignaturas que imparte:', asignaturas.length > 0 ? asignaturas.join(', ') : 'No registrado'],
@@ -451,6 +452,11 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
                 {docente.usuario_recitven === 1 && (
                   <span className="bg-cyan-50 text-cyan-800 border border-cyan-200 text-[11px] font-bold px-2 py-0.5 rounded-md">
                     RECITVEN ✓
+                  </span>
+                )}
+                {docente.publicaciones_repositorio === 1 && (
+                  <span className="bg-indigo-50 text-indigo-800 border border-indigo-200 text-[11px] font-bold px-2 py-0.5 rounded-md">
+                    Repositorio UPTPC ✓
                   </span>
                 )}
               </div>
@@ -842,6 +848,11 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
                 <p>
                   <strong className="text-slate-800">RECITVEN:</strong>{' '}
                   {docente.usuario_recitven === 1 ? 'Sí posee registro' : 'No'}
+                </p>
+
+                <p>
+                  <strong className="text-slate-800">Repositorio Oficial UPTPC:</strong>{' '}
+                  {docente.publicaciones_repositorio === 1 ? 'Sí ha efectuado publicaciones' : 'No'}
                 </p>
 
                 {pnfs.length > 0 && (

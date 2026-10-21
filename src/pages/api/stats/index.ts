@@ -3,6 +3,12 @@ import db from '@/lib/turso';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    try {
+      await db.execute('ALTER TABLE docentes ADD COLUMN publicaciones_repositorio INTEGER DEFAULT 0;');
+    } catch {
+      // Ignorar si la columna ya existe
+    }
+
     // 1. Totales generales
     const totalsRes = await db.execute(`
       SELECT 
@@ -12,6 +18,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         SUM(CASE WHEN componente_docente = 1 THEN 1 ELSE 0 END) as conComponenteDocente,
         SUM(CASE WHEN componente_docente = 0 AND encuestado = 1 THEN 1 ELSE 0 END) as sinComponenteDocente,
         SUM(CASE WHEN usuario_recitven = 1 THEN 1 ELSE 0 END) as enRecitven,
+        SUM(CASE WHEN publicaciones_repositorio = 1 THEN 1 ELSE 0 END) as conPublicacionesRepositorio,
+        SUM(CASE WHEN (publicaciones_repositorio = 0 OR publicaciones_repositorio IS NULL) AND encuestado = 1 THEN 1 ELSE 0 END) as sinPublicacionesRepositorio,
         SUM(CASE WHEN colegiado = 1 THEN 1 ELSE 0 END) as colegiados,
         SUM(CASE WHEN publicaciones_libros = 1 THEN 1 ELSE 0 END) as conPublicacionesLibros,
         SUM(CASE WHEN publicaciones_articulos = 1 THEN 1 ELSE 0 END) as conPublicacionesArticulos,
@@ -137,6 +145,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         conComponenteDocente: Number(row?.conComponenteDocente || 0),
         sinComponenteDocente: Number(row?.sinComponenteDocente || 0),
         enRecitven: Number(row?.enRecitven || 0),
+        conPublicacionesRepositorio: Number(row?.conPublicacionesRepositorio || 0),
+        sinPublicacionesRepositorio: Number(row?.sinPublicacionesRepositorio || 0),
         colegiados: Number(row?.colegiados || 0),
         conPublicacionesLibros: Number(row?.conPublicacionesLibros || 0),
         conPublicacionesArticulos: Number(row?.conPublicacionesArticulos || 0),

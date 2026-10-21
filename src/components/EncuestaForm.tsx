@@ -22,6 +22,7 @@ import {
   CheckSquare,
   Square,
   Microscope,
+  ExternalLink,
 } from 'lucide-react';
 import {
   Docente,
@@ -125,6 +126,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
   // 3. Docencia & Gremio
   const [componenteDocente, setComponenteDocente] = useState(false);
   const [usuarioRecitven, setUsuarioRecitven] = useState(false);
+  const [publicacionesRepositorio, setPublicacionesRepositorio] = useState(false);
   const [colegiado, setColegiado] = useState(false);
   const [nombreColegio, setNombreColegio] = useState('');
   const [numeroColegio, setNumeroColegio] = useState('');
@@ -293,6 +295,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
 
       setComponenteDocente(initialDocente.componente_docente === 1);
       setUsuarioRecitven(initialDocente.usuario_recitven === 1);
+      setPublicacionesRepositorio(initialDocente.publicaciones_repositorio === 1);
       setColegiado(initialDocente.colegiado === 1);
       setNombreColegio(initialDocente.nombre_colegio || '');
       setNumeroColegio(initialDocente.numero_colegio || '');
@@ -411,6 +414,13 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
 
             setTutoriaProyectosActiva(doc.tutoria_proyectos_activa === 1);
             setTutoriasProyectos(parseJsonSafe(doc.tutorias_detalle));
+
+            setComponenteDocente(doc.componente_docente === 1);
+            setUsuarioRecitven(doc.usuario_recitven === 1);
+            setPublicacionesRepositorio(doc.publicaciones_repositorio === 1);
+            setColegiado(doc.colegiado === 1);
+            setNombreColegio(doc.nombre_colegio || '');
+            setNumeroColegio(doc.numero_colegio || '');
 
             setSelectedPnfs(parseJsonSafe(doc.pnfs));
             setConoceLineasPnf(doc.conoce_lineas_pnf === 1);
@@ -831,6 +841,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
 
       componente_docente: componenteDocente ? 1 : 0,
       usuario_recitven: usuarioRecitven ? 1 : 0,
+      publicaciones_repositorio: publicacionesRepositorio ? 1 : 0,
       colegiado: colegiado ? 1 : 0,
       nombre_colegio: nombreColegio,
       numero_colegio: numeroColegio,
@@ -1653,7 +1664,8 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
             <span>Docencia, Gremio y Programas Nacionales de Formación (PNF)</span>
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* DOCENCIA Y GREMIO */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Componente Docente */}
             <div
               onClick={() => setComponenteDocente(!componenteDocente)}
@@ -1672,29 +1684,6 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
               <input
                 type="checkbox"
                 checked={componenteDocente}
-                readOnly
-                className="w-4 h-4 rounded text-[#0B4D94] focus:ring-[#0B4D94] pointer-events-none"
-              />
-            </div>
-
-            {/* Usuario en RECITVEN */}
-            <div
-              onClick={() => setUsuarioRecitven(!usuarioRecitven)}
-              className={`p-3.5 rounded-xl border cursor-pointer select-none transition-all flex items-center justify-between ${
-                usuarioRecitven
-                  ? 'bg-blue-50/90 border-[#0B4D94] shadow-xs ring-1 ring-[#0B4D94]/30'
-                  : 'bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
-              }`}
-            >
-              <div>
-                <p className={`font-bold text-xs ${usuarioRecitven ? 'text-[#0B4D94]' : 'text-slate-800'}`}>
-                  Usuario en RECITVEN
-                </p>
-                <p className="text-[10px] text-slate-500">Registro Científico e Innovación</p>
-              </div>
-              <input
-                type="checkbox"
-                checked={usuarioRecitven}
                 readOnly
                 className="w-4 h-4 rounded text-[#0B4D94] focus:ring-[#0B4D94] pointer-events-none"
               />
@@ -1725,7 +1714,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
 
             {colegiado && (
               <>
-                <div className="sm:col-span-2 animate-slide-in">
+                <div className="animate-slide-in">
                   <label className="block text-xs font-bold text-slate-700 mb-1">Nombre del Colegio Profesional</label>
                   <input
                     type="text"
@@ -1747,6 +1736,166 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
                 </div>
               </>
             )}
+          </div>
+
+          {/* REGISTRO CIENTÍFICO (RECITVEN) Y REPOSITORIO OFICIAL UPTPC */}
+          <div className="border border-slate-200 rounded-xl p-4 sm:p-5 bg-white space-y-4 shadow-2xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Atom className="w-4 h-4 text-[#0B4D94]" />
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Registro Científico (RECITVEN) y Repositorio Institucional UPTPC
+                </h4>
+              </div>
+            </div>
+
+            {/* 1. Usuario en RECITVEN */}
+            <div
+              onClick={() => setUsuarioRecitven(!usuarioRecitven)}
+              className={`p-3.5 rounded-xl border cursor-pointer select-none transition-all flex items-center justify-between ${
+                usuarioRecitven
+                  ? 'bg-blue-50/90 border-[#0B4D94] shadow-xs ring-1 ring-[#0B4D94]/30'
+                  : 'bg-slate-50 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+              }`}
+            >
+              <div>
+                <p className={`font-bold text-xs ${usuarioRecitven ? 'text-[#0B4D94]' : 'text-slate-800'}`}>
+                  ¿Posee usuario registrado en RECITVEN?
+                </p>
+                <p className="text-[10px] text-slate-500">
+                  Registro Científico, Tecnológico y de Innovación de Venezuela (Mincyt / ONCTI)
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={usuarioRecitven}
+                readOnly
+                className="w-4 h-4 rounded text-[#0B4D94] focus:ring-[#0B4D94] pointer-events-none"
+              />
+            </div>
+
+            {/* 2. Pregunta inmediata después de RECITVEN: Publicaciones en el Repositorio Oficial UPTPC */}
+            <div className="pt-2 border-t border-slate-100 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <BookOpen className="w-4 h-4 text-[#0B4D94]" />
+                    <span>¿Ha efectuado publicaciones en el REPOSITORIO OFICIAL DE LA UPTPC?</span>
+                  </label>
+                  <p className="text-[11px] text-slate-500">
+                    Plataforma institucional de investigación y producción intelectual:{' '}
+                    <a
+                      href="https://repositorio.uptpc.edu.ve/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#0B4D94] font-semibold hover:underline inline-flex items-center gap-0.5"
+                    >
+                      https://repositorio.uptpc.edu.ve/
+                      <ExternalLink className="w-3 h-3 inline" />
+                    </a>
+                  </p>
+                </div>
+                <span
+                  className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border self-start sm:self-auto ${
+                    publicacionesRepositorio
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}
+                >
+                  {publicacionesRepositorio ? 'Sí ha publicado' : 'No ha publicado'}
+                </span>
+              </div>
+
+              {/* Opciones Sí / No */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div
+                  onClick={() => setPublicacionesRepositorio(true)}
+                  className={`flex items-center gap-3 p-3 rounded-xl border text-xs font-medium cursor-pointer select-none transition-all ${
+                    publicacionesRepositorio
+                      ? 'bg-blue-50/90 border-[#0B4D94] text-[#0B4D94] font-bold shadow-xs ring-1 ring-[#0B4D94]/30'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                      publicacionesRepositorio ? 'border-[#0B4D94] bg-[#0B4D94] text-white' : 'border-slate-300 bg-white'
+                    }`}
+                  >
+                    {publicacionesRepositorio && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                  <div>
+                    <span className="block font-bold">SÍ, he efectuado publicaciones en el Repositorio</span>
+                    <span className="text-[10px] text-slate-500 font-normal">
+                      Poseo libros, artículos, ponencias o trabajos de investigación registrados en repositorio.uptpc.edu.ve
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  onClick={() => setPublicacionesRepositorio(false)}
+                  className={`flex items-center gap-3 p-3 rounded-xl border text-xs font-medium cursor-pointer select-none transition-all ${
+                    !publicacionesRepositorio
+                      ? 'bg-amber-50/80 border-amber-400 text-amber-900 font-bold shadow-xs'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                      !publicacionesRepositorio ? 'border-amber-600 bg-amber-600 text-white' : 'border-slate-300 bg-white'
+                    }`}
+                  >
+                    {!publicacionesRepositorio && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                  <div>
+                    <span className="block font-bold">NO he efectuado publicaciones</span>
+                    <span className="text-[10px] text-slate-500 font-normal">
+                      Aún no he subido ni publicado producciones intelectuales en la plataforma
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Si la respuesta es no: Mostrar recordatorio visible */}
+              {!publicacionesRepositorio && (
+                <div className="p-3.5 bg-gradient-to-r from-amber-50 via-orange-50/40 to-amber-50 border border-amber-200/90 rounded-xl text-xs text-amber-900 animate-slide-in flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-start gap-2.5">
+                    <div className="p-1.5 bg-amber-100 text-amber-800 rounded-lg shrink-0 mt-0.5 sm:mt-0">
+                      <Sparkles className="w-4 h-4 text-amber-700" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-amber-900 text-xs">
+                        Recordatorio Institucional: Repositorio Oficial UPTPC
+                      </p>
+                      <p className="text-[11px] text-amber-800/90 leading-relaxed">
+                        Le recordamos que la plataforma del <strong>REPOSITORIO OFICIAL DE LA UPTPC</strong> (
+                        <a
+                          href="https://repositorio.uptpc.edu.ve/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold underline text-[#0B4D94] hover:text-blue-900 inline-flex items-center gap-0.5"
+                        >
+                          https://repositorio.uptpc.edu.ve/
+                          <ExternalLink className="w-3 h-3 inline" />
+                        </a>
+                        ) se encuentra plenamente disponible para que las y los docentes e investigadores publiquen, alojen y difundan sus investigaciones, artículos, trabajos de grado y producciones intelectuales.
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href="https://repositorio.uptpc.edu.ve/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0B4D94] hover:bg-blue-800 text-white font-bold text-xs rounded-lg transition-colors shadow-xs"
+                  >
+                    <span>Visitar Plataforma</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
 
             {/* SELECCIÓN DE PROGRAMAS (PNF) SOLICITADOS */}
             <div className="sm:col-span-3 border border-slate-200 rounded-xl p-4 bg-white space-y-2">

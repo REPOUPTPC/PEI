@@ -144,6 +144,7 @@ async function initDatabase() {
       
       componente_docente INTEGER DEFAULT 0,
       usuario_recitven INTEGER DEFAULT 0,
+      publicaciones_repositorio INTEGER DEFAULT 0,
       colegiado INTEGER DEFAULT 0,
       nombre_colegio TEXT,
       numero_colegio TEXT,

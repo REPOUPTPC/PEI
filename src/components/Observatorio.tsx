@@ -97,7 +97,22 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
 
   // Compute effective stats: server stats > computed from docentes > default baseline
   const effectiveStats: ObservatorioStats = useMemo(() => {
-    if (stats) return stats;
+    if (stats) {
+      const conRepositorio =
+        stats.conPublicacionesRepositorio !== undefined
+          ? stats.conPublicacionesRepositorio
+          : docentes.filter(d => d.publicaciones_repositorio === 1).length;
+      const sinRepositorio =
+        stats.sinPublicacionesRepositorio !== undefined
+          ? stats.sinPublicacionesRepositorio
+          : docentes.filter(d => (d.publicaciones_repositorio === 0 || !d.publicaciones_repositorio) && d.encuestado === 1).length;
+
+      return {
+        ...stats,
+        conPublicacionesRepositorio: conRepositorio,
+        sinPublicacionesRepositorio: sinRepositorio,
+      };
+    }
 
     // Synthesize from docentes if available
     const total = docentes.length;
@@ -168,6 +183,8 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
       conComponenteDocente: docentes.filter(d => d.componente_docente === 1).length,
       sinComponenteDocente: docentes.filter(d => d.componente_docente === 0 && d.encuestado === 1).length,
       enRecitven: docentes.filter(d => d.usuario_recitven === 1).length,
+      conPublicacionesRepositorio: docentes.filter(d => d.publicaciones_repositorio === 1).length,
+      sinPublicacionesRepositorio: docentes.filter(d => (d.publicaciones_repositorio === 0 || !d.publicaciones_repositorio) && d.encuestado === 1).length,
       colegiados: docentes.filter(d => d.colegiado === 1).length,
       conPublicacionesLibros: docentes.filter(d => d.publicaciones_libros === 1).length,
       conPublicacionesArticulos: docentes.filter(d => d.publicaciones_articulos === 1).length,
@@ -330,6 +347,7 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
   const radarLabels = [
     'Componente Docente',
     'Investigación RECITVEN',
+    'Repositorio UPTPC',
     'Colegiatura Gremial',
     'Libros con ISBN',
     'Artículos Científicos',
@@ -339,6 +357,7 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
   const radarValues = [
     Math.min(100, Math.round(((effectiveStats.conComponenteDocente || 0) / totalBase) * 100)),
     Math.min(100, Math.round(((effectiveStats.enRecitven || 0) / totalBase) * 100)),
+    Math.min(100, Math.round(((effectiveStats.conPublicacionesRepositorio || 0) / totalBase) * 100)),
     Math.min(100, Math.round(((effectiveStats.colegiados || 0) / totalBase) * 100)),
     Math.min(100, Math.round(((effectiveStats.conPublicacionesLibros || 0) / totalBase) * 100)),
     Math.min(100, Math.round(((effectiveStats.conPublicacionesArticulos || 0) / totalBase) * 100)),
@@ -358,6 +377,52 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
         pointBorderColor: '#fff',
         pointHoverBackgroundColor: '#fff',
         pointHoverBorderColor: '#2563EB',
+      },
+    ],
+  };
+
+  // ==========================================
+  // 5B. DATA: REPOSITORIO OFICIAL UPTPC Y PRODUCCIÓN CIENTÍFICA
+  // ==========================================
+  const conRepositorioCount = effectiveStats.conPublicacionesRepositorio || 0;
+  const sinRepositorioCount =
+    effectiveStats.sinPublicacionesRepositorio !== undefined
+      ? effectiveStats.sinPublicacionesRepositorio
+      : Math.max(0, (effectiveStats.totalEncuestados || 0) - conRepositorioCount);
+
+  const dataRepositorioDoughnut = {
+    labels: ['Con Publicaciones en Repositorio', 'Sin Publicaciones en Repositorio'],
+    datasets: [
+      {
+        data: [conRepositorioCount, sinRepositorioCount],
+        backgroundColor: ['#0B4D94', '#E2E8F0'],
+        hoverBackgroundColor: ['#073262', '#CBD5E1'],
+        borderWidth: 2,
+        borderColor: '#ffffff',
+      },
+    ],
+  };
+
+  const dataProduccionCientifica = {
+    labels: [
+      'RECITVEN',
+      'Repositorio UPTPC',
+      'Libros con ISBN',
+      'Artículos Arbitrados',
+      'Proyectos I+D+i',
+    ],
+    datasets: [
+      {
+        label: 'Docentes Participantes',
+        data: [
+          effectiveStats.enRecitven || 0,
+          conRepositorioCount,
+          effectiveStats.conPublicacionesLibros || 0,
+          effectiveStats.conPublicacionesArticulos || 0,
+          effectiveStats.conInvestigacionActiva || 0,
+        ],
+        backgroundColor: ['#10B981', '#0B4D94', '#F59E0B', '#8B5CF6', '#06B6D4'],
+        borderRadius: 8,
       },
     ],
   };
@@ -776,9 +841,13 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
           </div>
           <div className="mt-3">
             <p className="text-2xl sm:text-3xl font-extrabold text-emerald-900">{effectiveStats.enRecitven}</p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-1">
               <span className="font-semibold text-emerald-700">
-                {effectiveStats.conInvestigacionActiva} proyectos activos
+                {effectiveStats.conInvestigacionActiva} proyectos
+              </span>
+              <span>•</span>
+              <span className="font-semibold text-blue-700">
+                {effectiveStats.conPublicacionesRepositorio || 0} en Repositorio
               </span>
             </p>
           </div>
@@ -796,21 +865,22 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
           </div>
         </div>
 
-        {/* Card 4: Producción Intelectual */}
+        {/* Card 4: Producción & Repositorio */}
         <div className="card-white p-5 card-hover border-t-4 border-t-amber-500">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Producción Intelectual</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Producción & Repositorio</span>
             <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
               <BookOpen className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-3">
             <p className="text-2xl sm:text-3xl font-extrabold text-amber-900">
-              {effectiveStats.conPublicacionesLibros + effectiveStats.conPublicacionesArticulos}
+              {(effectiveStats.conPublicacionesLibros || 0) + (effectiveStats.conPublicacionesArticulos || 0) + (effectiveStats.conPublicacionesRepositorio || 0)}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-1">
               <span className="font-semibold text-amber-700">{effectiveStats.conPublicacionesLibros} Libros</span> •{' '}
-              <span>{effectiveStats.conPublicacionesArticulos} Artículos</span>
+              <span>{effectiveStats.conPublicacionesArticulos} Artículos</span> •{' '}
+              <span className="font-semibold text-[#0B4D94]">{effectiveStats.conPublicacionesRepositorio || 0} Repositorio</span>
             </p>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
@@ -819,7 +889,9 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
               style={{
                 width: `${
                   effectiveStats.totalDocentes > 0
-                    ? ((effectiveStats.conPublicacionesLibros + effectiveStats.conPublicacionesArticulos) /
+                    ? (((effectiveStats.conPublicacionesLibros || 0) +
+                        (effectiveStats.conPublicacionesArticulos || 0) +
+                        (effectiveStats.conPublicacionesRepositorio || 0)) /
                         effectiveStats.totalDocentes) *
                       100
                     : 0
@@ -1085,6 +1157,21 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {d.usuario_recitven === 1 && (
+                          <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            RECITVEN
+                          </span>
+                        )}
+                        {d.publicaciones_repositorio === 1 && (
+                          <span className="bg-blue-100 text-[#0B4D94] text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            REPOSITORIO
+                          </span>
+                        )}
+                        {d.publicaciones_repositorio === 1 && (
+                          <span className="bg-blue-100 text-[#0B4D94] text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            REPOSITORIO
+                          </span>
+                        )}
                         {d.posee_doctorado === 1 && (
                           <span className="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                             PhD
@@ -1093,6 +1180,11 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
                         {d.posee_maestria === 1 && d.posee_doctorado !== 1 && (
                           <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                             MSc
+                          </span>
+                        )}
+                        {d.publicaciones_repositorio === 1 && (
+                          <span className="bg-blue-50 text-[#0B4D94] border border-blue-200 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            REPOSITORIO
                           </span>
                         )}
                         <span className="text-xs font-semibold text-[#0B4D94] group-hover:underline flex items-center gap-1">
@@ -1234,7 +1326,7 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
             </div>
 
             {/* Métricas Conectadas del PNF */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <div className="bg-white p-3.5 rounded-xl border border-sky-100 shadow-2xs">
                 <p className="text-[11px] text-slate-500 font-medium">Docentes Adscritos</p>
                 <p className="text-xl font-extrabold text-sky-900 mt-0.5">{docentesEnPnf.length}</p>
@@ -1249,6 +1341,12 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
                 <p className="text-[11px] text-slate-500 font-medium">En RECITVEN</p>
                 <p className="text-xl font-extrabold text-emerald-900 mt-0.5">
                   {docentesEnPnf.filter(d => d.usuario_recitven === 1).length}
+                </p>
+              </div>
+              <div className="bg-white p-3.5 rounded-xl border border-sky-100 shadow-2xs">
+                <p className="text-[11px] text-slate-500 font-medium">En Repositorio UPTPC</p>
+                <p className="text-xl font-extrabold text-[#0B4D94] mt-0.5">
+                  {docentesEnPnf.filter(d => d.publicaciones_repositorio === 1).length}
                 </p>
               </div>
               <div className="bg-white p-3.5 rounded-xl border border-sky-100 shadow-2xs">
@@ -1318,6 +1416,21 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
+                        {d.usuario_recitven === 1 && (
+                          <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            RECITVEN
+                          </span>
+                        )}
+                        {d.publicaciones_repositorio === 1 && (
+                          <span className="bg-blue-100 text-[#0B4D94] text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            REPOSITORIO
+                          </span>
+                        )}
+                        {d.publicaciones_repositorio === 1 && (
+                          <span className="bg-blue-100 text-[#0B4D94] text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            REPOSITORIO
+                          </span>
+                        )}
                         {d.posee_doctorado === 1 && (
                           <span className="bg-purple-100 text-purple-800 text-[10px] font-bold px-1.5 py-0.5 rounded">
                             PhD
@@ -1550,6 +1663,11 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
                         {d.usuario_recitven === 1 && (
                           <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">
                             RECITVEN
+                          </span>
+                        )}
+                        {d.publicaciones_repositorio === 1 && (
+                          <span className="bg-blue-100 text-[#0B4D94] text-[10px] font-bold px-1.5 py-0.5 rounded">
+                            REPOSITORIO
                           </span>
                         )}
                         <span className="text-xs text-purple-700 font-semibold group-hover:underline flex items-center gap-0.5">
@@ -1785,6 +1903,167 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
               Representa la diversidad formativa de las principales casas de estudio del país.
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* SECCIÓN: OBSERVATORIO DEL REPOSITORIO OFICIAL UPTPC Y DIVULGACIÓN CIENTÍFICA */}
+      <section id="seccion-repositorio" className="card-white p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0B4D94] uppercase tracking-wider mb-1">
+              <BookOpen className="w-4 h-4" />
+              <span>Divulgación Científica y Producción Institucional</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900">
+              Observatorio de Publicaciones en el Repositorio Oficial UPTPC
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Monitoreo del nivel de adopción del <strong>Repositorio Oficial de la UPTPC</strong> y balance global de producción científica de los docentes censados.
+            </p>
+          </div>
+
+          <a
+            href="https://repositorio.uptpc.edu.ve/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="self-start md:self-auto inline-flex items-center gap-2 px-3.5 py-2 bg-[#0B4D94] hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+          >
+            <span>Ir al Repositorio Oficial</span>
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        </div>
+
+        {/* Fila con Métricas Rápidas */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <p className="text-xs text-slate-500 font-medium">Publicaciones en Repositorio</p>
+            <p className="text-2xl font-extrabold text-[#0B4D94] mt-1">{conRepositorioCount}</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {effectiveStats.totalEncuestados > 0
+                ? `${Math.round((conRepositorioCount / effectiveStats.totalEncuestados) * 100)}% de los censados`
+                : '0% de los censados'}
+            </p>
+          </div>
+
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <p className="text-xs text-slate-500 font-medium">Sin Publicaciones Aún</p>
+            <p className="text-2xl font-extrabold text-amber-600 mt-1">{sinRepositorioCount}</p>
+            <p className="text-[11px] text-amber-700/80 mt-0.5">Disponibles para publicar</p>
+          </div>
+
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <p className="text-xs text-slate-500 font-medium">Inscritos en RECITVEN</p>
+            <p className="text-2xl font-extrabold text-emerald-600 mt-1">{effectiveStats.enRecitven || 0}</p>
+            <p className="text-[11px] text-emerald-700/80 mt-0.5">Registro Nacional Mincyt</p>
+          </div>
+
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <p className="text-xs text-slate-500 font-medium">Libros & Artículos</p>
+            <p className="text-2xl font-extrabold text-purple-600 mt-1">
+              {(effectiveStats.conPublicacionesLibros || 0) + (effectiveStats.conPublicacionesArticulos || 0)}
+            </p>
+            <p className="text-[11px] text-purple-700/80 mt-0.5">
+              {effectiveStats.conPublicacionesLibros || 0} libros • {effectiveStats.conPublicacionesArticulos || 0} artículos
+            </p>
+          </div>
+        </div>
+
+        {/* Gráficos: Doughnut de Adopción y Barras Comparativas */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          {/* Gráfico Doughnut de Adopción */}
+          <div className="lg:col-span-5 flex flex-col items-center p-4 bg-slate-50/50 rounded-xl border border-slate-200">
+            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              Tasa de Adopción del Repositorio UPTPC
+            </h4>
+            <div className="w-full max-w-xs h-60 relative flex items-center justify-center">
+              <Doughnut
+                data={dataRepositorioDoughnut}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'bottom',
+                      labels: { boxWidth: 12, font: { size: 10 } },
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: ctx => ` ${ctx.label}: ${ctx.raw} docentes (${Math.round(((ctx.raw as number) / Math.max(1, effectiveStats.totalEncuestados || 1)) * 100)}%)`,
+                      },
+                    },
+                  },
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Gráfico de Barras: Comparativa de Producción Científica */}
+          <div className="lg:col-span-7 p-4 bg-slate-50/50 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Ecosistema de Producción Científica y Divulgación
+              </h4>
+              <span className="text-[11px] font-semibold text-[#0B4D94] bg-blue-50 px-2 py-0.5 rounded">
+                Comparativa
+              </span>
+            </div>
+            <div className="h-60">
+              <Bar
+                data={dataProduccionCientifica}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      callbacks: {
+                        label: ctx => ` ${ctx.raw} docentes activos`,
+                      },
+                    },
+                  },
+                  scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 2 } },
+                    x: { ticks: { font: { size: 10 } } },
+                  },
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Recordatorio institucional */}
+        <div className="p-4 bg-blue-50/80 border border-blue-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-blue-950">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-blue-100 text-[#0B4D94] rounded-lg shrink-0 mt-0.5 sm:mt-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-slate-900">
+                La plataforma del Repositorio Oficial UPTPC está abierta y disponible
+              </p>
+              <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                Invitamos a toda la planta docente a cargar sus artículos, ponencias, libros y trabajos de grado en{' '}
+                <a
+                  href="https://repositorio.uptpc.edu.ve/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-[#0B4D94] underline"
+                >
+                  https://repositorio.uptpc.edu.ve/
+                </a>{' '}
+                para garantizar la visibilidad global, indexación e impacto del conocimiento universitario territorial.
+              </p>
+            </div>
+          </div>
+          <a
+            href="https://repositorio.uptpc.edu.ve/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0B4D94] hover:bg-blue-800 text-white rounded-lg font-bold text-xs shadow-xs"
+          >
+            <span>Publicar en Repositorio</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         </div>
       </section>
 

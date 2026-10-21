@@ -17,6 +17,7 @@ async function migrate() {
 
   // 1. Columnas a añadir a la tabla docentes si no existen
   const colsToAdd = [
+    { name: 'publicaciones_repositorio', type: 'INTEGER DEFAULT 0' },
     { name: 'areas_interes_investigativo', type: 'TEXT' },
     { name: 'participado_ponente', type: 'INTEGER DEFAULT 0' },
     { name: 'participado_participante', type: 'INTEGER DEFAULT 0' },

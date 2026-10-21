@@ -179,6 +179,7 @@ export interface Docente {
 
   componente_docente?: number;
   usuario_recitven?: number;
+  publicaciones_repositorio?: number; // 1: Sí ha publicado en repositorio.uptpc.edu.ve, 0: No
   colegiado?: number;
   nombre_colegio?: string;
   numero_colegio?: string;
@@ -235,6 +236,8 @@ export interface ObservatorioStats {
   conComponenteDocente: number;
   sinComponenteDocente: number;
   enRecitven: number;
+  conPublicacionesRepositorio?: number;
+  sinPublicacionesRepositorio?: number;
   colegiados: number;
   conPublicacionesLibros: number;
   conPublicacionesArticulos: number;

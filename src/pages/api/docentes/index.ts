@@ -97,6 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         doctorados,
         componente_docente,
         usuario_recitven,
+        publicaciones_repositorio,
         colegiado,
         nombre_colegio,
         numero_colegio,
@@ -165,6 +166,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const cleanCedula = cedula.trim().toUpperCase();
 
+      try {
+        await db.execute('ALTER TABLE docentes ADD COLUMN publicaciones_repositorio INTEGER DEFAULT 0;');
+      } catch {
+        // Ignorar si la columna ya existe
+      }
+
       await db.execute({
         sql: `INSERT OR REPLACE INTO docentes (
           cedula, nombres, apellidos, nombre_completo, fecha_nacimiento, genero, email, telefono, foto_url,
@@ -172,7 +179,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           id_estado, estado_nombre, id_municipio, municipio_nombre, id_parroquia, parroquia_nombre, direccion,
           tipo_profesion, carrera_pregrado, rama_especifica, universidad_pregrado, anio_pregrado, titulos_adicionales,
           posee_especialidad, especialidades, posee_maestria, maestrias, posee_doctorado, doctorados,
-          componente_docente, usuario_recitven, colegiado, nombre_colegio, numero_colegio,
+          componente_docente, usuario_recitven, publicaciones_repositorio, colegiado, nombre_colegio, numero_colegio,
           pnfs, conoce_lineas_pnf, lineas_pnf_detalle, asignaturas_imparte, linea_investigacion, areas_interes_investigativo, investigacion_en_desarrollo, investigacion_instituto, investigacion_titulo, investigacion_linea,
           publicaciones_libros, libros_detalle, publicaciones_articulos, articulos_detalle,
           participado_ponente, participado_participante, eventos_detalle,
@@ -186,8 +193,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
           ?, ?, ?, ?,
           ?, ?, ?,
           ?, ?,
@@ -229,6 +236,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           typeof doctorados === 'string' ? doctorados : JSON.stringify(doctorados || []),
           componente_docente ? 1 : 0,
           usuario_recitven ? 1 : 0,
+          publicaciones_repositorio ? 1 : 0,
           colegiado ? 1 : 0,
           nombre_colegio || null,
           numero_colegio || null,
