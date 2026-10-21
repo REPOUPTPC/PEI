@@ -135,6 +135,67 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       LIMIT 10
     `);
 
+    // 7. Distribución Real de Universidades (Alma Máter) y Tipo (Pública / Privada)
+    const univsRes = await db.execute(`
+      SELECT 
+        TRIM(universidad_pregrado) as univ,
+        COUNT(*) as total
+      FROM docentes
+      WHERE universidad_pregrado IS NOT NULL AND TRIM(universidad_pregrado) != ''
+      GROUP BY TRIM(universidad_pregrado)
+      ORDER BY total DESC
+    `);
+
+    let totalPublica = 0;
+    let totalPrivada = 0;
+    let totalSinDefinir = 0;
+
+    // Obtener catálogo de tipos para cruce
+    let catalogoUnivMap: Record<string, string> = {};
+    try {
+      const catRes = await db.execute('SELECT nombre, siglas, tipo FROM universidades_venezuela');
+      catRes.rows.forEach(r => {
+        const nom = (r.nombre as string || '').toLowerCase();
+        const sig = (r.siglas as string || '').toLowerCase();
+        const tipo = (r.tipo as string || 'Pública');
+        if (nom) catalogoUnivMap[nom] = tipo;
+        if (sig) catalogoUnivMap[sig] = tipo;
+      });
+    } catch {}
+
+    const distribucionUniversidades = univsRes.rows.map(r => {
+      const univ = r.univ as string;
+      const count = Number(r.total);
+      const lower = univ.toLowerCase();
+
+      let tipo = catalogoUnivMap[lower] || '';
+      if (!tipo) {
+        if (lower.includes('católica') || lower.includes('catolica') || lower.includes('metropolitana') || lower.includes('santa maría') || lower.includes('santa maria') || lower.includes('arturo michelena') || lower.includes('josé antonio páez') || lower.includes('jose antonio paez') || lower.includes('ujap') || lower.includes('uam') || lower.includes('urbe') || lower.includes('monteávila') || lower.includes('bicentenaria') || lower.includes('fermin toro') || lower.includes('fermín toro') || lower.includes('yacambú') || lower.includes('alejandro de humboldt') || lower.includes('panamericana del puerto') || lower.includes('unipap') || lower.includes('privada')) {
+          tipo = 'Privada';
+        } else if (lower.includes('upt') || lower.includes('iut') || lower.includes('ucv') || lower.includes('ula') || lower.includes('luz') || lower.includes('udo') || lower.includes('unexpo') || lower.includes('unefa') || lower.includes('unerg') || lower.includes('unellez') || lower.includes('unefm') || lower.includes('upel') || lower.includes('ubv') || lower.includes('unesr') || lower.includes('carabobo') || lower.includes('pública') || lower.includes('publica') || lower.includes('experimental') || lower.includes('nacional')) {
+          tipo = 'Pública';
+        } else {
+          tipo = 'Otra / Internacional';
+        }
+      }
+
+      if (tipo === 'Pública') totalPublica += count;
+      else if (tipo === 'Privada') totalPrivada += count;
+      else totalSinDefinir += count;
+
+      return {
+        univ,
+        tipo,
+        total: count,
+      };
+    });
+
+    const distribucionTipoUniversidad = [
+      { tipo: 'Universidad Pública', total: totalPublica },
+      { tipo: 'Universidad Privada', total: totalPrivada },
+      ...(totalSinDefinir > 0 ? [{ tipo: 'Otra / Extranjera', total: totalSinDefinir }] : []),
+    ];
+
     return res.status(200).json({
       success: true,
       stats: {
@@ -169,6 +230,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           municipio: r.municipio as string,
           total: Number(r.total),
         })),
+        distribucionTipoUniversidad,
+        distribucionUniversidades,
       },
     });
   } catch (error: any) {

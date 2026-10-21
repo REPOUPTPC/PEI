@@ -43,7 +43,7 @@ import {
   Maximize2,
   Zap,
 } from 'lucide-react';
-import { Docente, ObservatorioStats } from '@/lib/types';
+import { Docente, ObservatorioStats, UniversidadVenezuela } from '@/lib/types';
 
 ChartJS.register(
   CategoryScale,
@@ -83,10 +83,24 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
   const [selectedRama, setSelectedRama] = useState<string | null>(null);
   const [selectedPnf, setSelectedPnf] = useState<string | null>(null);
   const [selectedNivel, setSelectedNivel] = useState<string | null>(null);
+  const [selectedUniversidad, setSelectedUniversidad] = useState<string | null>(null);
   const [searchDocente, setSearchDocente] = useState('');
   const [searchPnfDocente, setSearchPnfDocente] = useState('');
   const [searchNivelDocente, setSearchNivelDocente] = useState('');
+  const [searchUnivDocente, setSearchUnivDocente] = useState('');
+  const [catalogoUniversidades, setCatalogoUniversidades] = useState<UniversidadVenezuela[]>([]);
   const [timedOut, setTimedOut] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/universidades')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && Array.isArray(d.universidades)) {
+          setCatalogoUniversidades(d.universidades);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -301,25 +315,19 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
   // ==========================================
   const aniosGraduacionMap: Record<number, number> = {};
   docentes.forEach(d => {
-    if (d.anio_pregrado && d.anio_pregrado >= 1980 && d.anio_pregrado <= 2026) {
+    if (d.anio_pregrado && d.anio_pregrado >= 1960 && d.anio_pregrado <= 2030) {
       aniosGraduacionMap[d.anio_pregrado] = (aniosGraduacionMap[d.anio_pregrado] || 0) + 1;
     }
   });
 
-  // Si hay pocos datos en local, proveer línea de base histórica armónica
-  const yearsRange = [1990, 1994, 1998, 2002, 2006, 2010, 2014, 2018, 2022, 2024];
-  const lineLabels =
-    Object.keys(aniosGraduacionMap).length >= 5
-      ? Object.keys(aniosGraduacionMap)
-          .map(Number)
-          .sort((a, b) => a - b)
-          .map(String)
-      : yearsRange.map(String);
+  // Datos 100% reales derivados de la nómina y censo (sin mockups residuales)
+  const lineYearsSorted = Object.keys(aniosGraduacionMap)
+    .map(Number)
+    .sort((a, b) => a - b);
 
-  const lineCounts =
-    Object.keys(aniosGraduacionMap).length >= 5
-      ? lineLabels.map(y => aniosGraduacionMap[Number(y)] || 0)
-      : [1, 2, 3, 5, 8, 12, 16, 14, 9, 6];
+  const lineLabels = lineYearsSorted.map(String);
+  const lineCounts = lineYearsSorted.map(y => aniosGraduacionMap[y] || 0);
+  const hasLineEgresosData = lineLabels.length > 0;
 
   const dataLineaEgresos = {
     labels: lineLabels,
@@ -494,8 +502,51 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
     ],
   };
 
+  // Clasificador de régimen universitario (Pública vs. Privada) automatizado
+  const getTipoUniversidad = (univName: string): 'Pública' | 'Privada' | 'Otra / Internacional' => {
+    if (!univName) return 'Otra / Internacional';
+    const clean = univName.trim().toLowerCase();
+
+    // 1. Búsqueda exacta en catálogo oficial de Venezuela
+    const found = catalogoUniversidades.find(
+      u => u.nombre.toLowerCase() === clean || (u.siglas && u.siglas.toLowerCase() === clean)
+    );
+    if (found) return found.tipo === 'Privada' ? 'Privada' : 'Pública';
+
+    // 2. Búsqueda por subcadena en catálogo
+    const partial = catalogoUniversidades.find(
+      u => clean.includes(u.nombre.toLowerCase()) || (u.siglas && clean.includes(u.siglas.toLowerCase()))
+    );
+    if (partial) return partial.tipo === 'Privada' ? 'Privada' : 'Pública';
+
+    // 3. Reglas heurísticas nacionales
+    if (
+      clean.includes('católica') || clean.includes('catolica') || clean.includes('metropolitana') ||
+      clean.includes('santa maría') || clean.includes('santa maria') || clean.includes('arturo michelena') ||
+      clean.includes('josé antonio páez') || clean.includes('jose antonio paez') || clean.includes('ujap') ||
+      clean.includes('uam') || clean.includes('urbe') || clean.includes('monteávila') ||
+      clean.includes('bicentenaria') || clean.includes('fermin toro') || clean.includes('fermín toro') ||
+      clean.includes('yacambú') || clean.includes('alejandro de humboldt') || clean.includes('panamericana') ||
+      clean.includes('unipap') || clean.includes('privada')
+    ) {
+      return 'Privada';
+    }
+
+    if (
+      clean.includes('upt') || clean.includes('iut') || clean.includes('ucv') || clean.includes('ula') ||
+      clean.includes('luz') || clean.includes('udo') || clean.includes('unexpo') || clean.includes('unefa') ||
+      clean.includes('unerg') || clean.includes('unellez') || clean.includes('unefm') || clean.includes('upel') ||
+      clean.includes('ubv') || clean.includes('unesr') || clean.includes('carabobo') || clean.includes('pública') ||
+      clean.includes('publica') || clean.includes('experimental') || clean.includes('nacional')
+    ) {
+      return 'Pública';
+    }
+
+    return 'Otra / Internacional';
+  };
+
   // ==========================================
-  // 7. DATA: ALMA MÁTER / UNIVERSIDADES DE EGRESO (Horizontal Bar)
+  // 7. DATA: ALMA MÁTER Y FORMACIÓN (PÚBLICA VS. PRIVADA)
   // ==========================================
   const univMap: Record<string, number> = {};
   docentes.forEach(d => {
@@ -505,33 +556,97 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
     }
   });
 
-  const sortedUnivs = Object.keys(univMap)
+  // 100% datos reales (sin datos residuales de prueba)
+  const activeUnivs = Object.keys(univMap)
     .map(k => ({ univ: k, total: univMap[k] }))
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 6);
+    .sort((a, b) => b.total - a.total);
 
-  const defaultUnivs = [
-    { univ: 'Universidad de Carabobo (UC)', total: 5 },
-    { univ: 'UPTPC / IUTPC', total: 4 },
-    { univ: 'Universidad Central de Venezuela (UCV)', total: 2 },
-    { univ: 'Universidad Nacional Experimental de la FANB (UNEFA)', total: 2 },
-    { univ: 'Universidad del Zulia (LUZ)', total: 1 },
-    { univ: 'UNEXPO', total: 1 },
-  ];
+  const hasUniversidadesData = activeUnivs.length > 0;
 
-  const activeUnivs = sortedUnivs.length >= 3 ? sortedUnivs : defaultUnivs;
+  // Cálculo cuantitativo de Régimen Formativo (Pública vs. Privada)
+  const tipoUnivCounts = useMemo(() => {
+    let publica = 0;
+    let privada = 0;
+    let otra = 0;
+
+    docentes.forEach(d => {
+      const u = d.universidad_pregrado?.trim();
+      if (u && u.length > 1) {
+        const tipo = getTipoUniversidad(u);
+        if (tipo === 'Pública') publica++;
+        else if (tipo === 'Privada') privada++;
+        else otra++;
+      }
+    });
+
+    const totalEgresados = publica + privada + otra;
+    return {
+      publica,
+      privada,
+      otra,
+      totalEgresados,
+      pctPublica: totalEgresados > 0 ? Math.round((publica / totalEgresados) * 100) : 0,
+      pctPrivada: totalEgresados > 0 ? Math.round((privada / totalEgresados) * 100) : 0,
+      pctOtra: totalEgresados > 0 ? Math.round((otra / totalEgresados) * 100) : 0,
+    };
+  }, [docentes, catalogoUniversidades]);
+
+  const dataTipoUniversidad = {
+    labels: [
+      `Universidad Pública (${tipoUnivCounts.pctPublica}%)`,
+      `Universidad Privada (${tipoUnivCounts.pctPrivada}%)`,
+      ...(tipoUnivCounts.otra > 0 ? [`Otra / Extranjera (${tipoUnivCounts.pctOtra}%)`] : []),
+    ],
+    datasets: [
+      {
+        data: [
+          tipoUnivCounts.publica,
+          tipoUnivCounts.privada,
+          ...(tipoUnivCounts.otra > 0 ? [tipoUnivCounts.otra] : []),
+        ],
+        backgroundColor: ['#0B4D94', '#7C3AED', '#64748B'],
+        borderColor: ['#ffffff', '#ffffff', '#ffffff'],
+        borderWidth: 2,
+        hoverOffset: 6,
+      },
+    ],
+  };
 
   const dataUniversidades = {
-    labels: activeUnivs.map(u => u.univ),
+    labels: activeUnivs.slice(0, 10).map(u => u.univ),
     datasets: [
       {
         label: 'Docentes Egresados',
-        data: activeUnivs.map(u => u.total),
-        backgroundColor: '#4F46E5',
+        data: activeUnivs.slice(0, 10).map(u => u.total),
+        backgroundColor: activeUnivs.slice(0, 10).map(u =>
+          getTipoUniversidad(u.univ) === 'Privada' ? '#7C3AED' : '#0B4D94'
+        ),
         borderRadius: 6,
       },
     ],
   };
+
+  // Docentes egresados de la universidad seleccionada para drilldown
+  const docentesDeUniversidad = useMemo(() => {
+    if (!selectedUniversidad) return [];
+    const target = selectedUniversidad.toLowerCase().trim();
+    return docentes.filter(d => {
+      const u = (d.universidad_pregrado || '').toLowerCase().trim();
+      if (!u) return false;
+      return u === target || u.includes(target) || target.includes(u);
+    });
+  }, [selectedUniversidad, docentes]);
+
+  const filteredDocentesDeUniversidad = useMemo(() => {
+    if (!searchUnivDocente.trim()) return docentesDeUniversidad;
+    const q = searchUnivDocente.toLowerCase().trim();
+    return docentesDeUniversidad.filter(d =>
+      d.nombre_completo.toLowerCase().includes(q) ||
+      d.cedula.includes(q) ||
+      (d.carrera_pregrado || '').toLowerCase().includes(q) ||
+      (d.cargo || '').toLowerCase().includes(q)
+    );
+  }, [docentesDeUniversidad, searchUnivDocente]);
 
   // ==========================================
   // FILTERING LOGIC
@@ -1719,27 +1834,39 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
               </span>
             </div>
 
-            <div className="h-64">
-              <Line
-                data={dataLineaEgresos}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                      callbacks: {
-                        label: ctx => ` ${ctx.raw} docentes egresados en el año ${ctx.label}`,
+            {hasLineEgresosData ? (
+              <div className="h-64">
+                <Line
+                  data={dataLineaEgresos}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: {
+                        callbacks: {
+                          label: ctx => ` ${ctx.raw} docentes egresados en el año ${ctx.label}`,
+                        },
                       },
                     },
-                  },
-                  scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 2 } },
-                    x: { ticks: { font: { size: 10 } } },
-                  },
-                }}
-              />
-            </div>
+                    scales: {
+                      y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                      x: { ticks: { font: { size: 10 } } },
+                    },
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="h-64 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                <div className="w-12 h-12 rounded-full bg-blue-50 text-[#0B4D94] flex items-center justify-center mb-3">
+                  <Calendar className="w-6 h-6" />
+                </div>
+                <h5 className="font-bold text-sm text-slate-700">Sin registros de años de egreso</h5>
+                <p className="text-xs text-slate-400 max-w-sm mt-1">
+                  No hay años de graduación registrados en la base de datos. Conforme los docentes completen su censo, la curva histórica se generará automáticamente en tiempo real.
+                </p>
+              </div>
+            )}
             <p className="text-[11px] text-slate-400 text-center">
               Muestra los picos generacionales de formación y la madurez académica del personal docente.
             </p>
@@ -1788,122 +1915,385 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
           </div>
         </div>
 
-        {/* Fila 2: Matriz de Dispersión (Scatter Plot) & Alma Máter */}
+        {/* Fila 2: Matriz de Dispersión (Scatter Plot) */}
+        <div className="card-white p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-emerald-600" />
+                <span>Matriz de Dispersión: Trayectoria vs Nivel Académico</span>
+              </h4>
+              <p className="text-[11px] text-slate-400">
+                Año de egreso (X) vs Grado Obtenido (Y: 1=Pregrado, 2=Espec., 3=MSc, 4=PhD)
+              </p>
+            </div>
+            <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+              Dispersión
+            </span>
+          </div>
+
+          <div className="h-64 cursor-pointer">
+            <Scatter
+              data={dataScatter}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } },
+                  tooltip: {
+                    callbacks: {
+                      label: (ctx: any) => {
+                        const doc = ctx.raw?.docente as Docente | undefined;
+                        if (doc) {
+                          return ` ${doc.nombre_completo} (${doc.carrera_pregrado || doc.tipo_profesion}) - Año: ${doc.anio_pregrado || 'N/A'}`;
+                        }
+                        return ` Año: ${ctx.raw.x}`;
+                      },
+                    },
+                  },
+                },
+                scales: {
+                  x: {
+                    title: { display: true, text: 'Año de Graduación', font: { size: 10 } },
+                    ticks: { stepSize: 5 },
+                  },
+                  y: {
+                    title: { display: true, text: 'Nivel Académico', font: { size: 10 } },
+                    ticks: {
+                      stepSize: 1,
+                      callback: val => {
+                        if (val === 1) return 'Pregrado';
+                        if (val === 2) return 'Especialista';
+                        if (val === 3) return 'Magíster';
+                        if (val === 4) return 'Doctor';
+                        return '';
+                      },
+                    },
+                    min: 0.5,
+                    max: 4.5,
+                  },
+                },
+                onClick: (evt, elements) => {
+                  if (elements.length > 0) {
+                    const el = elements[0];
+                    const dataset = dataScatter.datasets[el.datasetIndex];
+                    const pt: any = dataset.data[el.index];
+                    if (pt && pt.docente) {
+                      onSelectDocente(pt.docente);
+                    }
+                  }
+                },
+              }}
+            />
+          </div>
+          <p className="text-[11px] text-slate-400 text-center flex items-center justify-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>Haz clic en cualquier punto del diagrama de dispersión para abrir la ficha del docente</span>
+          </p>
+        </div>
+
+        {/* Fila 3: Régimen Formativo (Pública vs. Privada) & Alma Máter de Origen */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Gráfico de Dispersión: Año de Egreso vs Grado */}
-          <div className="lg:col-span-7 card-white p-5 space-y-4">
+          {/* Régimen Universitario: Pública vs Privada */}
+          <div className="lg:col-span-5 card-white p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-emerald-600" />
-                  <span>Matriz de Dispersión: Trayectoria vs Nivel Académico</span>
+                  <Building2 className="w-4 h-4 text-[#0B4D94]" />
+                  <span>Formación: Pública vs. Privada</span>
                 </h4>
                 <p className="text-[11px] text-slate-400">
-                  Año de egreso (X) vs Grado Obtenido (Y: 1=Pregrado, 2=Espec., 3=MSc, 4=PhD)
+                  Cálculo cuantitativo automatizado según catálogo oficial
                 </p>
               </div>
-              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                Dispersión
+              <span className="text-xs font-bold text-[#0B4D94] bg-blue-50 px-2 py-0.5 rounded-md">
+                Régimen
               </span>
             </div>
 
-            <div className="h-64 cursor-pointer">
-              <Scatter
-                data={dataScatter}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } },
-                    tooltip: {
-                      callbacks: {
-                        label: (ctx: any) => {
-                          const doc = ctx.raw?.docente as Docente | undefined;
-                          if (doc) {
-                            return ` ${doc.nombre_completo} (${doc.carrera_pregrado || doc.tipo_profesion}) - Año: ${doc.anio_pregrado || 'N/A'}`;
-                          }
-                          return ` Año: ${ctx.raw.x}`;
+            {hasUniversidadesData ? (
+              <div className="space-y-4">
+                <div className="h-48 flex items-center justify-center">
+                  <Doughnut
+                    data={dataTipoUniversidad}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
+                        tooltip: {
+                          callbacks: {
+                            label: ctx => ` ${ctx.raw} docentes (${tipoUnivCounts.totalEgresados > 0 ? Math.round(((ctx.raw as number) / tipoUnivCounts.totalEgresados) * 100) : 0}%)`,
+                          },
                         },
                       },
-                    },
-                  },
-                  scales: {
-                    x: {
-                      title: { display: true, text: 'Año de Graduación', font: { size: 10 } },
-                      ticks: { stepSize: 5 },
-                    },
-                    y: {
-                      title: { display: true, text: 'Nivel Académico', font: { size: 10 } },
-                      ticks: {
-                        stepSize: 1,
-                        callback: val => {
-                          if (val === 1) return 'Pregrado';
-                          if (val === 2) return 'Especialista';
-                          if (val === 3) return 'Magíster';
-                          if (val === 4) return 'Doctor';
-                          return '';
-                        },
-                      },
-                      min: 0.5,
-                      max: 4.5,
-                    },
-                  },
-                  onClick: (evt, elements) => {
-                    if (elements.length > 0) {
-                      const el = elements[0];
-                      const dataset = dataScatter.datasets[el.datasetIndex];
-                      const pt: any = dataset.data[el.index];
-                      if (pt && pt.docente) {
-                        onSelectDocente(pt.docente);
-                      }
-                    }
-                  },
-                }}
-              />
-            </div>
-            <p className="text-[11px] text-slate-400 text-center flex items-center justify-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>Haz clic en cualquier punto del diagrama de dispersión para abrir la ficha del docente</span>
-            </p>
+                      cutout: '65%',
+                    }}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl">
+                    <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">
+                      Universidad Pública
+                    </span>
+                    <div className="flex items-baseline gap-1 mt-0.5">
+                      <span className="text-xl font-extrabold text-[#0B4D94]">
+                        {tipoUnivCounts.publica}
+                      </span>
+                      <span className="text-xs text-slate-500 font-semibold">
+                        ({tipoUnivCounts.pctPublica}%)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-purple-50/70 border border-purple-100 rounded-xl">
+                    <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wider block">
+                      Universidad Privada
+                    </span>
+                    <div className="flex items-baseline gap-1 mt-0.5">
+                      <span className="text-xl font-extrabold text-purple-800">
+                        {tipoUnivCounts.privada}
+                      </span>
+                      <span className="text-xs text-slate-500 font-semibold">
+                        ({tipoUnivCounts.pctPrivada}%)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-400 text-center">
+                  El sistema infiere la naturaleza institucional a partir de la universidad seleccionada, garantizando métricas cuantitativas sin sesgos.
+                </p>
+              </div>
+            ) : (
+              <div className="h-64 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                <Building2 className="w-8 h-8 text-slate-300 mb-2" />
+                <h5 className="font-bold text-xs text-slate-600">Sin datos de universidades</h5>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Los porcentajes de universidades públicas y privadas se calcularán automáticamente al censar los docentes.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Gráfico de Universidades de Egreso (Alma Máter) */}
-          <div className="lg:col-span-5 card-white p-5 space-y-4">
+          <div className="lg:col-span-7 card-white p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
                   <School className="w-4 h-4 text-indigo-600" />
                   <span>Alma Máter de Origen</span>
                 </h4>
-                <p className="text-[11px] text-slate-400">Universidades de egreso de los docentes</p>
+                <p className="text-[11px] text-slate-400">
+                  Haz clic en cualquier barra o universidad para ver sus docentes egresados
+                </p>
               </div>
               <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
                 Ranking
               </span>
             </div>
 
-            <div className="h-64">
-              <Bar
-                data={dataUniversidades}
-                options={{
-                  indexAxis: 'y',
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: { display: false },
-                  },
-                  scales: {
-                    x: { beginAtZero: true, ticks: { stepSize: 1 } },
-                    y: { ticks: { font: { size: 10 } } },
-                  },
-                }}
-              />
-            </div>
-            <p className="text-[11px] text-slate-400 text-center">
-              Representa la diversidad formativa de las principales casas de estudio del país.
-            </p>
+            {hasUniversidadesData ? (
+              <div className="space-y-3">
+                <div className="h-64 cursor-pointer">
+                  <Bar
+                    data={dataUniversidades}
+                    options={{
+                      indexAxis: 'y',
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                          callbacks: {
+                            label: ctx => ` ${ctx.raw} docentes egresados • ${getTipoUniversidad(String(ctx.label))}`,
+                          },
+                        },
+                      },
+                      scales: {
+                        x: { beginAtZero: true, ticks: { stepSize: 1 } },
+                        y: { ticks: { font: { size: 10 } } },
+                      },
+                      onClick: (evt, elements) => {
+                        if (elements.length > 0) {
+                          const el = elements[0];
+                          const univName = dataUniversidades.labels[el.index];
+                          if (univName) {
+                            setSelectedUniversidad(prev => (prev === univName ? null : univName));
+                            setSearchUnivDocente('');
+                          }
+                        }
+                      },
+                    }}
+                  />
+                </div>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                    Filtrar por Casa de Estudios (clic para ver nómina):
+                  </span>
+                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                    {activeUnivs.map(u => {
+                      const isSelected = selectedUniversidad === u.univ;
+                      const tipo = getTipoUniversidad(u.univ);
+                      return (
+                        <button
+                          key={u.univ}
+                          type="button"
+                          onClick={() => {
+                            setSelectedUniversidad(isSelected ? null : u.univ);
+                            setSearchUnivDocente('');
+                          }}
+                          className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 border ${
+                            isSelected
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                              : tipo === 'Privada'
+                              ? 'bg-purple-50 hover:bg-purple-100 text-purple-800 border-purple-200'
+                              : 'bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-200'
+                          }`}
+                        >
+                          <span className="truncate max-w-[200px]">{u.univ}</span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                            isSelected ? 'bg-white text-indigo-700' : 'bg-white/80 text-slate-700'
+                          }`}>
+                            {u.total}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-64 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                <School className="w-8 h-8 text-slate-300 mb-2" />
+                <h5 className="font-bold text-xs text-slate-600">Sin universidades de egreso</h5>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  A medida que los docentes indiquen su universidad de pregrado, se reflejará aquí en tiempo real.
+                </p>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* PANEL DE DRILLDOWN: DOCENTES EGRESADOS DE LA UNIVERSIDAD SELECCIONADA */}
+        {selectedUniversidad && (
+          <div className="card-white p-6 border-2 border-indigo-300 bg-indigo-50/20 rounded-2xl space-y-4 animate-fade-in shadow-md">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-100 pb-4">
+              <div className="flex items-start gap-3">
+                <div className="p-3 bg-indigo-600 text-white rounded-xl shadow-xs">
+                  <School className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="font-extrabold text-base text-slate-900">
+                      Docentes Egresados de: {selectedUniversidad}
+                    </h4>
+                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
+                      {docentesDeUniversidad.length} {docentesDeUniversidad.length === 1 ? 'Docente' : 'Docentes'}
+                    </span>
+                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
+                      getTipoUniversidad(selectedUniversidad) === 'Privada'
+                        ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                        : 'bg-blue-100 text-blue-800 border border-blue-200'
+                    }`}>
+                      {getTipoUniversidad(selectedUniversidad)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Planta profesoral activa de la UPTPC formada en esta institución universitaria
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre, cédula o carrera..."
+                    value={searchUnivDocente}
+                    onChange={e => setSearchUnivDocente(e.target.value)}
+                    className="text-xs bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-indigo-600 w-56"
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedUniversidad(null);
+                    setSearchUnivDocente('');
+                  }}
+                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg transition-colors border border-slate-200"
+                  title="Cerrar detalle"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Nominal Grid of Docentes */}
+            {filteredDocentesDeUniversidad.length === 0 ? (
+              <div className="p-8 text-center text-xs text-slate-400">
+                No se encontraron docentes con ese criterio de búsqueda en {selectedUniversidad}.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {filteredDocentesDeUniversidad.map(d => (
+                  <div
+                    key={d.cedula}
+                    className="p-3.5 bg-white border border-indigo-100 hover:border-indigo-300 rounded-xl shadow-xs transition-all flex flex-col justify-between space-y-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      {d.foto_url ? (
+                        <img
+                          src={d.foto_url}
+                          alt={d.nombre_completo}
+                          className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0">
+                          {d.nombre_completo.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <h5 className="font-bold text-xs text-slate-900 truncate">
+                          {d.nombre_completo}
+                        </h5>
+                        <p className="text-[11px] text-slate-500 font-mono">
+                          C.I. {d.cedula}
+                        </p>
+                        <div className="text-[11px] text-indigo-700 font-medium truncate mt-0.5">
+                          {d.carrera_pregrado || d.tipo_profesion || 'Docente'}
+                          {d.anio_pregrado ? ` (${d.anio_pregrado})` : ''}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                      <span className="text-[10px] font-semibold text-slate-500 bg-slate-50 px-2 py-0.5 rounded">
+                        {d.posee_doctorado === 1
+                          ? 'Doctor (PhD)'
+                          : d.posee_maestria === 1
+                          ? 'Magíster'
+                          : d.posee_especialidad === 1
+                          ? 'Especialista'
+                          : 'Pregrado'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onSelectDocente(d)}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0B4D94] hover:text-blue-800 hover:underline"
+                      >
+                        <span>Ver Ficha</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* SECCIÓN: OBSERVATORIO DEL REPOSITORIO OFICIAL UPTPC Y DIVULGACIÓN CIENTÍFICA */}

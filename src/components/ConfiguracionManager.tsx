@@ -18,8 +18,14 @@ import {
   Download,
   ShieldAlert,
   Sparkles,
+  School,
+  Plus,
+  Edit3,
+  Search,
+  X,
+  Building2,
 } from 'lucide-react';
-import { AdminPermisos, EncuestadorPermisos, Usuario } from '@/lib/types';
+import { AdminPermisos, EncuestadorPermisos, Usuario, UniversidadVenezuela } from '@/lib/types';
 import { useToast } from './Toast';
 
 interface ConfiguracionManagerProps {
@@ -75,8 +81,44 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
   const [limpiandoDocentes, setLimpiandoDocentes] = useState(false);
   const [descargandoRespaldo, setDescargandoRespaldo] = useState(false);
 
+  // Catálogo de Universidades de Venezuela CRUD
+  const [universidades, setUniversidades] = useState<UniversidadVenezuela[]>([]);
+  const [loadingUnivs, setLoadingUnivs] = useState(false);
+  const [searchUniv, setSearchUniv] = useState('');
+  const [filtroTipoUniv, setFiltroTipoUniv] = useState<string>('TODAS');
+  const [modalUnivOpen, setModalUnivOpen] = useState(false);
+  const [editingUniv, setEditingUniv] = useState<UniversidadVenezuela | null>(null);
+  const [savingUniv, setSavingUniv] = useState(false);
+  const [deletingUnivId, setDeletingUnivId] = useState<number | null>(null);
+  const [restoringUnivs, setRestoringUnivs] = useState(false);
+
+  // Form fields for Univ Modal
+  const [univNombre, setUnivNombre] = useState('');
+  const [univSiglas, setUnivSiglas] = useState('');
+  const [univTipo, setUnivTipo] = useState<'Pública' | 'Privada'>('Pública');
+  const [univSubtipo, setUnivSubtipo] = useState('Experimental');
+  const [univSede, setUnivSede] = useState('');
+  const [univEstado, setUnivEstado] = useState('');
+
+  const loadUniversidades = async () => {
+    setLoadingUnivs(true);
+    try {
+      const res = await fetch('/api/universidades');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.universidades)) {
+        setUniversidades(data.universidades);
+      }
+    } catch (err: any) {
+      console.error('Error cargando universidades:', err);
+    } finally {
+      setLoadingUnivs(false);
+    }
+  };
+
   // Load config on mount
   useEffect(() => {
+    loadUniversidades();
+
     fetch('/api/configuracion')
       .then(r => r.json())
       .then(data => {
@@ -344,7 +386,133 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
     }
   };
 
+  const handleOpenCreateUniv = () => {
+    setEditingUniv(null);
+    setUnivNombre('');
+    setUnivSiglas('');
+    setUnivTipo('Pública');
+    setUnivSubtipo('Experimental');
+    setUnivSede('');
+    setUnivEstado('');
+    setModalUnivOpen(true);
+  };
+
+  const handleOpenEditUniv = (u: UniversidadVenezuela) => {
+    setEditingUniv(u);
+    setUnivNombre(u.nombre);
+    setUnivSiglas(u.siglas || '');
+    setUnivTipo((u.tipo === 'Privada' ? 'Privada' : 'Pública') as 'Pública' | 'Privada');
+    setUnivSubtipo(u.subtipo || 'General');
+    setUnivSede(u.sede_principal || '');
+    setUnivEstado(u.estado || '');
+    setModalUnivOpen(true);
+  };
+
+  const handleSaveUniv = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!univNombre.trim()) {
+      showToast('error', 'Nombre Requerido', 'Indique el nombre de la universidad');
+      return;
+    }
+
+    setSavingUniv(true);
+    try {
+      const isEdit = !!editingUniv;
+      const res = await fetch(isEdit ? `/api/universidades/${editingUniv.id}` : '/api/universidades', {
+        method: isEdit ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingUniv?.id,
+          nombre: univNombre.trim(),
+          siglas: univSiglas.trim().toUpperCase() || null,
+          tipo: univTipo,
+          subtipo: univSubtipo.trim() || 'General',
+          sede_principal: univSede.trim() || null,
+          estado: univEstado.trim() || null,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast(
+          'success',
+          isEdit ? 'Universidad Actualizada' : 'Universidad Creada',
+          isEdit ? 'Los cambios se han guardado.' : 'Se incorporó al catálogo institucional.'
+        );
+        setModalUnivOpen(false);
+        await loadUniversidades();
+      } else {
+        showToast('error', 'Error al guardar', data.error || 'No se pudo guardar la universidad');
+      }
+    } catch (err: any) {
+      showToast('error', 'Error de conexión', err.message);
+    } finally {
+      setSavingUniv(false);
+    }
+  };
+
+  const handleDeleteUniv = async (id: number, nombre: string) => {
+    if (!window.confirm(`¿Está seguro de eliminar la universidad "${nombre}" del catálogo?`)) {
+      return;
+    }
+
+    setDeletingUnivId(id);
+    try {
+      const res = await fetch(`/api/universidades/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        showToast('success', 'Universidad Eliminada', `"${nombre}" fue removida del catálogo.`);
+        setUniversidades(prev => prev.filter(u => u.id !== id));
+      } else {
+        showToast('error', 'Error al eliminar', data.error);
+      }
+    } catch (err: any) {
+      showToast('error', 'Error de red', err.message);
+    } finally {
+      setDeletingUnivId(null);
+    }
+  };
+
+  const handleResetUniversidades = async () => {
+    if (!window.confirm('¿Desea restaurar el catálogo oficial de 59 universidades de Venezuela?')) {
+      return;
+    }
+
+    setRestoringUnivs(true);
+    try {
+      const res = await fetch('/api/universidades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('success', 'Catálogo Restaurado', data.message || 'Se restauraron 59 universidades.');
+        await loadUniversidades();
+      } else {
+        showToast('error', 'Error al restaurar', data.error);
+      }
+    } catch (err: any) {
+      showToast('error', 'Error de red', err.message);
+    } finally {
+      setRestoringUnivs(false);
+    }
+  };
+
   const isSuperAdmin = currentUser?.rol === 'SUPERADMIN';
+
+  const filteredUniversidades = universidades.filter(u => {
+    if (filtroTipoUniv !== 'TODAS' && u.tipo !== filtroTipoUniv) return false;
+    if (searchUniv.trim()) {
+      const q = searchUniv.toLowerCase().trim();
+      const matchNom = u.nombre.toLowerCase().includes(q);
+      const matchSig = (u.siglas || '').toLowerCase().includes(q);
+      const matchSub = (u.subtipo || '').toLowerCase().includes(q);
+      const matchEst = (u.estado || '').toLowerCase().includes(q);
+      return matchNom || matchSig || matchSub || matchEst;
+    }
+    return true;
+  });
 
   return (
     <div className="card-white p-6 sm:p-8 max-w-5xl mx-auto space-y-8 animate-fade-in shadow-md">
@@ -803,6 +971,181 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
         </div>
       </div>
 
+      {/* PANEL: CATÁLOGO OFICIAL DE UNIVERSIDADES DE VENEZUELA (CRUD) */}
+      <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 shadow-sm animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 bg-[#0B4D94] text-white rounded-xl shadow-xs mt-0.5">
+              <School className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-sm text-slate-900">
+                  Catálogo Oficial de Universidades de Venezuela
+                </h3>
+                <span className="bg-blue-100 text-[#0B4D94] border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  {universidades.length} Instituciones
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                Gestión integral (CRUD) del catálogo de universidades nacionales para el censo y el cálculo automático de formación pública vs. privada en el Observatorio.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleResetUniversidades}
+              disabled={restoringUnivs}
+              className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-xs font-semibold px-3 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
+              title="Restaura la lista original de 59 universidades"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-[#0B4D94] ${restoringUnivs ? 'animate-spin' : ''}`} />
+              <span>Restaurar Catálogo Base</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleOpenCreateUniv}
+              className="bg-[#0B4D94] hover:bg-blue-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nueva Universidad</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Filters and search */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setFiltroTipoUniv('TODAS')}
+              className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all ${
+                filtroTipoUniv === 'TODAS'
+                  ? 'bg-[#0B4D94] text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              Todas ({universidades.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFiltroTipoUniv('Pública')}
+              className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all ${
+                filtroTipoUniv === 'Pública'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              Públicas ({universidades.filter(u => u.tipo === 'Pública').length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFiltroTipoUniv('Privada')}
+              className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all ${
+                filtroTipoUniv === 'Privada'
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+              }`}
+            >
+              Privadas ({universidades.filter(u => u.tipo === 'Privada').length})
+            </button>
+          </div>
+
+          <div className="relative w-full sm:w-64">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, sigla o estado..."
+              value={searchUniv}
+              onChange={e => setSearchUniv(e.target.value)}
+              className="w-full text-xs bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-[#0B4D94]"
+            />
+          </div>
+        </div>
+
+        {/* Table of Universities */}
+        <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white max-h-80 overflow-y-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50 sticky top-0 border-b border-slate-200 text-slate-600 font-bold z-10">
+              <tr>
+                <th className="py-2.5 px-3">Institución Universitaria</th>
+                <th className="py-2.5 px-3">Siglas</th>
+                <th className="py-2.5 px-3">Régimen</th>
+                <th className="py-2.5 px-3">Subtipo</th>
+                <th className="py-2.5 px-3">Sede / Estado</th>
+                <th className="py-2.5 px-3 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loadingUnivs ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-400">
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto text-[#0B4D94] mb-1" />
+                    Cargando catálogo universitario...
+                  </td>
+                </tr>
+              ) : filteredUniversidades.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-400">
+                    No se encontraron universidades con ese criterio de búsqueda.
+                  </td>
+                </tr>
+              ) : (
+                filteredUniversidades.map(u => (
+                  <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-2.5 px-3 font-semibold text-slate-900">
+                      {u.nombre}
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-slate-600 font-bold">
+                      {u.siglas || '-'}
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                        u.tipo === 'Privada'
+                          ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                          : 'bg-blue-100 text-blue-800 border border-blue-200'
+                      }`}>
+                        {u.tipo}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-500">
+                      {u.subtipo || '-'}
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-500">
+                      {u.sede_principal ? `${u.sede_principal}${u.estado ? `, ${u.estado}` : ''}` : (u.estado || '-')}
+                    </td>
+                    <td className="py-2.5 px-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditUniv(u)}
+                          className="p-1 text-slate-400 hover:text-[#0B4D94] hover:bg-blue-50 rounded transition-colors"
+                          title="Editar universidad"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteUniv(u.id, u.nombre)}
+                          disabled={deletingUnivId === u.id}
+                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors disabled:opacity-50"
+                          title="Eliminar universidad"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* PANEL DESTACADO: PASE A PRODUCCIÓN Y LIMPIEZA DE DATOS DE PRUEBA */}
       {isSuperAdmin && (
         <div className="p-6 bg-rose-50/60 border border-rose-200 rounded-2xl space-y-4 shadow-sm animate-fade-in">
@@ -1004,6 +1347,128 @@ export const ConfiguracionManager: React.FC<ConfiguracionManagerProps> = ({
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CREAR / EDITAR UNIVERSIDAD */}
+      {modalUnivOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 border border-slate-200 animate-slide-in">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <School className="w-5 h-5 text-[#0B4D94]" />
+                <h3 className="font-bold text-base text-slate-900">
+                  {editingUniv ? 'Editar Universidad' : 'Nueva Universidad'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalUnivOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveUniv} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Nombre Completo *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. Universidad Central de Venezuela"
+                  value={univNombre}
+                  onChange={e => setUnivNombre(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Siglas</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. UCV, UC, USB"
+                    value={univSiglas}
+                    onChange={e => setUnivSiglas(e.target.value.toUpperCase())}
+                    className="w-full border border-slate-300 rounded-lg p-2.5 font-mono uppercase focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Régimen Institucional *</label>
+                  <select
+                    value={univTipo}
+                    onChange={e => setUnivTipo(e.target.value as 'Pública' | 'Privada')}
+                    className="w-full border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                  >
+                    <option value="Pública">Pública</option>
+                    <option value="Privada">Privada</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Subtipo</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Autónoma, Experimental, Politécnica..."
+                    value={univSubtipo}
+                    onChange={e => setUnivSubtipo(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Sede Principal</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Valencia, Caracas, Mérida"
+                    value={univSede}
+                    onChange={e => setUnivSede(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Estado / Entidad Federal</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Carabobo, Distrito Capital, Zulia"
+                  value={univEstado}
+                  onChange={e => setUnivEstado(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setModalUnivOpen(false)}
+                  disabled={savingUniv}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-xl transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingUniv}
+                  className="bg-[#0B4D94] hover:bg-blue-800 text-white font-bold px-4 py-2 rounded-xl shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {savingUniv ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>Guardar Universidad</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

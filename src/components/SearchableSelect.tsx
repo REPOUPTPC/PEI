@@ -15,6 +15,7 @@ interface SearchableSelectProps {
   disabledMessage?: string;
   required?: boolean;
   className?: string;
+  allowCustom?: boolean;
 }
 
 export const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -26,6 +27,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   disabledMessage,
   required = false,
   className = '',
+  allowCustom = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,6 +68,12 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     opt.label.toLowerCase().includes(searchTerm.toLowerCase().trim())
   );
 
+  const displayLabel = selectedOption
+    ? selectedOption.label
+    : (allowCustom && value ? String(value) : (disabled && disabledMessage ? disabledMessage : placeholder));
+
+  const hasValue = !!(selectedOption || (allowCustom && value));
+
   const handleSelect = (val: string | number) => {
     onChange(val);
     setIsOpen(false);
@@ -76,6 +84,11 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
     onChange('');
     setIsOpen(false);
   };
+
+  const exactMatch = filteredOptions.some(
+    opt => opt.label.toLowerCase() === searchTerm.toLowerCase().trim() ||
+           String(opt.value).toLowerCase() === searchTerm.toLowerCase().trim()
+  );
 
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>
@@ -104,12 +117,12 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             : 'border-slate-300 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0B4D94]'
         }`}
       >
-        <span className={`truncate mr-2 ${selectedOption ? 'font-medium text-slate-900' : 'text-slate-400'}`}>
-          {selectedOption ? selectedOption.label : disabled && disabledMessage ? disabledMessage : placeholder}
+        <span className={`truncate mr-2 ${hasValue ? 'font-medium text-slate-900' : 'text-slate-400'}`}>
+          {displayLabel}
         </span>
 
         <div className="flex items-center gap-1 shrink-0 text-slate-400">
-          {selectedOption && !disabled && (
+          {hasValue && !disabled && (
             <span
               onClick={handleClear}
               title="Borrar selección"
@@ -134,7 +147,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Escriba para filtrar..."
+                placeholder={allowCustom ? "Escriba para buscar o ingrese otra..." : "Escriba para filtrar..."}
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full text-xs bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-[#0B4D94]"
@@ -144,9 +157,24 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
           {/* Options List */}
           <div className="overflow-y-auto max-h-52 divide-y divide-slate-50 p-1">
+            {allowCustom && searchTerm.trim().length > 1 && !exactMatch && (
+              <div
+                onClick={() => handleSelect(searchTerm.trim())}
+                className="px-3 py-2 text-xs rounded-lg cursor-pointer bg-blue-50/80 hover:bg-blue-100 text-[#0B4D94] font-medium flex items-center justify-between transition-colors mb-1"
+              >
+                <span className="truncate">
+                  + Usar &quot;{searchTerm.trim()}&quot; (otra institución)
+                </span>
+              </div>
+            )}
+
             {filteredOptions.length === 0 ? (
               <div className="p-3 text-center text-xs text-slate-400">
-                No se encontraron opciones
+                {allowCustom && searchTerm.trim() ? (
+                  <span>Pulse arriba para usar &quot;{searchTerm.trim()}&quot;</span>
+                ) : (
+                  'No se encontraron opciones'
+                )}
               </div>
             ) : (
               filteredOptions.map(opt => {

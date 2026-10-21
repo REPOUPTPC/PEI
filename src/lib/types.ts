@@ -50,6 +50,16 @@ export interface UnidadCurricular {
   created_at?: string;
 }
 
+export interface UniversidadVenezuela {
+  id: number;
+  nombre: string;
+  siglas?: string;
+  tipo: 'Pública' | 'Privada' | string;
+  subtipo?: string;
+  sede_principal?: string;
+  estado?: string;
+}
+
 export interface Estado {
   id_estado: number;
   estado: string;
@@ -244,5 +254,7 @@ export interface ObservatorioStats {
   conInvestigacionActiva: number;
   lineasInvestigacionTop: { linea: string; total: number }[];
   distribucionGeografica?: { estado: string; municipio: string; total: number }[];
+  distribucionTipoUniversidad?: { tipo: string; total: number }[];
+  distribucionUniversidades?: { univ: string; tipo: string; total: number }[];
 }
 

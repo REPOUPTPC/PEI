@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Camera,
   Upload,
@@ -41,6 +41,7 @@ import {
   ItemTutoriaProyecto,
   AreaInteresInvestigativo,
   UnidadCurricular,
+  UniversidadVenezuela,
 } from '@/lib/types';
 import { useToast } from './Toast';
 import { SearchableSelect } from './SearchableSelect';
@@ -76,6 +77,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
   const [parroquias, setParroquias] = useState<Parroquia[]>([]);
   const [carreras, setCarreras] = useState<Carrera[]>([]);
   const [pnfList, setPnfList] = useState<PNF[]>([]);
+  const [universidadesList, setUniversidadesList] = useState<UniversidadVenezuela[]>([]);
   const [profesionesList, setProfesionesList] = useState<string[]>([
     'INGENIERO',
     'LICENCIADO',
@@ -210,6 +212,15 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       .then(d => {
         if (d.success && Array.isArray(d.areas)) {
           setCatalogoAreas(d.areas);
+        }
+      })
+      .catch(console.error);
+
+    fetch('/api/universidades')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && Array.isArray(d.universidades)) {
+          setUniversidadesList(d.universidades);
         }
       })
       .catch(console.error);
@@ -574,6 +585,14 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       setUploadingPhoto(false);
     }
   };
+
+  // Opciones de Universidades de Venezuela para selects
+  const universidadOptions = useMemo(() => {
+    return universidadesList.map(u => ({
+      value: u.nombre,
+      label: `${u.nombre}${u.siglas ? ` (${u.siglas})` : ''} • [${u.tipo}]`,
+    }));
+  }, [universidadesList]);
 
   // Handle Carrera Creation / Selection
   // Handlers para Formación Académica (Múltiples Títulos)
@@ -1371,13 +1390,15 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
 
                   {/* Universidad de Egreso */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Universidad de Egreso</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. UPTPC, Universidad de Carabobo, USB"
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Universidad de Egreso
+                    </label>
+                    <SearchableSelect
                       value={tit.universidad || ''}
-                      onChange={e => handleUpdateTitulo(idx, 'universidad', e.target.value)}
-                      className="w-full text-xs border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                      onChange={val => handleUpdateTitulo(idx, 'universidad', val)}
+                      options={universidadOptions}
+                      placeholder="Seleccionar Universidad de Venezuela..."
+                      allowCustom={true}
                     />
                   </div>
 
@@ -1461,18 +1482,20 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
                         }}
                         className="w-full text-[11px] border border-slate-200 rounded p-1.5"
                       />
-                      <div className="grid grid-cols-3 gap-1.5">
-                        <input
-                          type="text"
-                          placeholder="Universidad"
-                          value={esp.universidad}
-                          onChange={e => {
-                            const copy = [...especialidades];
-                            copy[i].universidad = e.target.value;
-                            setEspecialidades(copy);
-                          }}
-                          className="col-span-2 text-[11px] border border-slate-200 rounded p-1.5"
-                        />
+                      <div className="grid grid-cols-3 gap-1.5 items-center">
+                        <div className="col-span-2">
+                          <SearchableSelect
+                            value={esp.universidad || ''}
+                            onChange={val => {
+                              const copy = [...especialidades];
+                              copy[i].universidad = val;
+                              setEspecialidades(copy);
+                            }}
+                            options={universidadOptions}
+                            placeholder="Universidad..."
+                            allowCustom={true}
+                          />
+                        </div>
                         <input
                           type="number"
                           placeholder="Año"
@@ -1482,7 +1505,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
                             copy[i].anio = e.target.value;
                             setEspecialidades(copy);
                           }}
-                          className="text-[11px] border border-slate-200 rounded p-1.5"
+                          className="text-[11px] border border-slate-200 rounded p-2.5 bg-white"
                         />
                       </div>
                     </div>
@@ -1542,18 +1565,20 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
                         }}
                         className="w-full text-[11px] border border-slate-200 rounded p-1.5"
                       />
-                      <div className="grid grid-cols-3 gap-1.5">
-                        <input
-                          type="text"
-                          placeholder="Universidad"
-                          value={m.universidad}
-                          onChange={e => {
-                            const copy = [...maestrias];
-                            copy[i].universidad = e.target.value;
-                            setMaestrias(copy);
-                          }}
-                          className="col-span-2 text-[11px] border border-slate-200 rounded p-1.5"
-                        />
+                      <div className="grid grid-cols-3 gap-1.5 items-center">
+                        <div className="col-span-2">
+                          <SearchableSelect
+                            value={m.universidad || ''}
+                            onChange={val => {
+                              const copy = [...maestrias];
+                              copy[i].universidad = val;
+                              setMaestrias(copy);
+                            }}
+                            options={universidadOptions}
+                            placeholder="Universidad..."
+                            allowCustom={true}
+                          />
+                        </div>
                         <input
                           type="number"
                           placeholder="Año"
@@ -1563,7 +1588,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
                             copy[i].anio = e.target.value;
                             setMaestrias(copy);
                           }}
-                          className="text-[11px] border border-slate-200 rounded p-1.5"
+                          className="text-[11px] border border-slate-200 rounded p-2.5 bg-white"
                         />
                       </div>
                     </div>
@@ -1623,18 +1648,20 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
                         }}
                         className="w-full text-[11px] border border-slate-200 rounded p-1.5"
                       />
-                      <div className="grid grid-cols-3 gap-1.5">
-                        <input
-                          type="text"
-                          placeholder="Universidad"
-                          value={doc.universidad}
-                          onChange={e => {
-                            const copy = [...doctorados];
-                            copy[i].universidad = e.target.value;
-                            setDoctorados(copy);
-                          }}
-                          className="col-span-2 text-[11px] border border-slate-200 rounded p-1.5"
-                        />
+                      <div className="grid grid-cols-3 gap-1.5 items-center">
+                        <div className="col-span-2">
+                          <SearchableSelect
+                            value={doc.universidad || ''}
+                            onChange={val => {
+                              const copy = [...doctorados];
+                              copy[i].universidad = val;
+                              setDoctorados(copy);
+                            }}
+                            options={universidadOptions}
+                            placeholder="Universidad..."
+                            allowCustom={true}
+                          />
+                        </div>
                         <input
                           type="number"
                           placeholder="Año"
@@ -1644,7 +1671,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
                             copy[i].anio = e.target.value;
                             setDoctorados(copy);
                           }}
-                          className="text-[11px] border border-slate-200 rounded p-1.5"
+                          className="text-[11px] border border-slate-200 rounded p-2.5 bg-white"
                         />
                       </div>
                     </div>
