@@ -180,17 +180,19 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Quick Search & User Auth Actions */}
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end pt-1 sm:pt-0 border-t border-white/10 sm:border-none">
-            <form onSubmit={handleSearchSubmit} className="relative flex-1 sm:w-60">
-              <input
-                type="text"
-                placeholder="Buscar cédula o nombre..."
-                value={searchVal}
-                onChange={e => setSearchVal(e.target.value)}
-                className="w-full bg-white/15 text-white placeholder-blue-200 text-xs rounded-lg pl-8 pr-3 py-1.5 border border-white/20 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white focus:text-slate-900 focus:placeholder-slate-400 transition-all"
-              />
-              <Search className="w-3.5 h-3.5 text-blue-200 absolute left-2.5 top-2.5 pointer-events-none" />
-            </form>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-1 sm:pt-0 border-t border-white/10 sm:border-none">
+            {isLoggedIn && (
+              <form onSubmit={handleSearchSubmit} className="relative flex-1 sm:w-60">
+                <input
+                  type="text"
+                  placeholder="Buscar cédula o nombre..."
+                  value={searchVal}
+                  onChange={e => setSearchVal(e.target.value)}
+                  className="w-full bg-white/15 text-white placeholder-blue-200 text-xs rounded-lg pl-8 pr-3 py-1.5 border border-white/20 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white focus:text-slate-900 focus:placeholder-slate-400 transition-all"
+                />
+                <Search className="w-3.5 h-3.5 text-blue-200 absolute left-2.5 top-2.5 pointer-events-none" />
+              </form>
+            )}
 
             {isLoggedIn ? (
               <div className="flex items-center gap-2 bg-white/10 px-2.5 py-1 rounded-lg border border-white/15">
