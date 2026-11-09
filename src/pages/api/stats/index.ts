@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '@/lib/turso';
+import { ensureCensoSchema } from '@/lib/censoSchema';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -9,12 +10,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Ignorar si la columna ya existe
     }
 
+    // Esquema de completitud del censo (> 90% = censado) y trayectoria directiva
+    await ensureCensoSchema(db);
+
     // 1. Totales generales
     const totalsRes = await db.execute(`
       SELECT 
         COUNT(*) as totalDocentes,
         SUM(CASE WHEN encuestado = 1 THEN 1 ELSE 0 END) as totalEncuestados,
-        SUM(CASE WHEN encuestado = 0 THEN 1 ELSE 0 END) as totalPendientes,
+        SUM(CASE WHEN (encuestado = 0 OR encuestado IS NULL) AND (censo_iniciado IS NULL OR censo_iniciado = 0) THEN 1 ELSE 0 END) as totalPendientes,
+        SUM(CASE WHEN (encuestado = 0 OR encuestado IS NULL) AND censo_iniciado = 1 THEN 1 ELSE 0 END) as totalEnProgreso,
+        SUM(CASE WHEN (encuestado = 1 OR censo_iniciado = 1) AND (foto_url IS NULL OR TRIM(foto_url) = '') THEN 1 ELSE 0 END) as totalSinFoto,
         SUM(CASE WHEN componente_docente = 1 THEN 1 ELSE 0 END) as conComponenteDocente,
         SUM(CASE WHEN componente_docente = 0 AND encuestado = 1 THEN 1 ELSE 0 END) as sinComponenteDocente,
         SUM(CASE WHEN usuario_recitven = 1 THEN 1 ELSE 0 END) as enRecitven,
@@ -34,6 +40,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const totalDocentes = Number(row?.totalDocentes || 0);
     const totalEncuestados = Number(row?.totalEncuestados || 0);
     const totalPendientes = Number(row?.totalPendientes || 0);
+    const totalEnProgreso = Number(row?.totalEnProgreso || 0);
+    const totalSinFoto = Number(row?.totalSinFoto || 0);
     const porcentajesEncuestados = totalDocentes > 0 ? Math.round((totalEncuestados / totalDocentes) * 100) : 0;
 
     // 2. Distribución de profesiones y ramas (solo docentes con datos académicos reales o censados)
@@ -261,6 +269,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         totalDocentes,
         totalEncuestados,
         totalPendientes,
+        totalEnProgreso,
+        totalSinFoto,
         porcentajesEncuestados,
         conComponenteDocente: Number(row?.conComponenteDocente || 0),
         sinComponenteDocente: Number(row?.sinComponenteDocente || 0),

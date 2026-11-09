@@ -45,8 +45,24 @@ import {
   Activity,
   Maximize2,
   Zap,
+  Landmark,
+  Briefcase,
+  Vote,
+  ShieldCheck,
+  ChevronUp,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import { Docente, ObservatorioStats, UniversidadVenezuela } from '@/lib/types';
+import {
+  calcularCompletitud,
+  getEstadoCenso,
+  getPorcentajeCenso,
+  parseJsonArray,
+  UMBRAL_CENSO_COMPLETO,
+  UNIDADES_DIRECTIVAS_UPTPC,
+  ItemCargoExterno,
+} from '@/lib/censo';
 
 ChartJS.register(
   CategoryScale,
@@ -97,6 +113,25 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
   const [catalogoUniversidades, setCatalogoUniversidades] = useState<UniversidadVenezuela[]>([]);
   const [timedOut, setTimedOut] = useState(false);
 
+  // Estado del collapse en las 4 Tarjetas de Métricas Clave
+  const [expandedKpi, setExpandedKpi] = useState<'activos' | 'postgrado' | 'investigacion' | 'produccion' | null>(null);
+  const [kpiSubFilter, setKpiSubFilter] = useState<string>('TODOS');
+  const [searchKpi, setSearchKpi] = useState<string>('');
+
+  const toggleKpi = (key: 'activos' | 'postgrado' | 'investigacion' | 'produccion') => {
+    if (expandedKpi === key) {
+      setExpandedKpi(null);
+    } else {
+      setExpandedKpi(key);
+      setKpiSubFilter('TODOS');
+      setSearchKpi('');
+    }
+  };
+
+  // Estado de la Sección 6: Trayectoria Directiva y Cargos
+  const [directivoTab, setDirectivoTab] = useState<'actual_uptpc' | 'historico_uptpc' | 'actual_externo' | 'historico_externo' | 'politico'>('actual_uptpc');
+  const [searchDirectivo, setSearchDirectivo] = useState<string>('');
+
   useEffect(() => {
     fetch('/api/universidades')
       .then(r => r.json())
@@ -124,7 +159,7 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
     let geoMismos = 0;
     let geoDiferentes = 0;
 
-    const docentesCensados = docentes.filter(d => d.encuestado === 1);
+    const docentesCensados = docentes.filter(d => getEstadoCenso(d) === 'CENSADO');
     const poolGeo = docentesCensados.length > 0 ? docentesCensados : docentes;
 
     poolGeo.forEach(d => {
@@ -173,6 +208,10 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
       totalConDatos: totalGeo,
     };
 
+    const censadosList = docentes.filter(d => getEstadoCenso(d) === 'CENSADO');
+    const enProgresoList = docentes.filter(d => getEstadoCenso(d) === 'EN_PROGRESO');
+    const pendientesList = docentes.filter(d => getEstadoCenso(d) === 'PENDIENTE');
+
     if (stats) {
       const conRepositorio =
         stats.conPublicacionesRepositorio !== undefined
@@ -181,10 +220,17 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
       const sinRepositorio =
         stats.sinPublicacionesRepositorio !== undefined
           ? stats.sinPublicacionesRepositorio
-          : docentes.filter(d => (d.publicaciones_repositorio === 0 || !d.publicaciones_repositorio) && d.encuestado === 1).length;
+          : docentes.filter(d => (d.publicaciones_repositorio === 0 || !d.publicaciones_repositorio) && getEstadoCenso(d) === 'CENSADO').length;
 
       return {
         ...stats,
+        totalEncuestados: stats.totalEncuestados ?? censadosList.length,
+        totalEnProgreso: stats.totalEnProgreso ?? enProgresoList.length,
+        totalPendientes: stats.totalPendientes !== undefined ? stats.totalPendientes : pendientesList.length,
+        porcentajesEncuestados:
+          stats.totalDocentes > 0
+            ? Math.round(((stats.totalEncuestados ?? censadosList.length) / stats.totalDocentes) * 100)
+            : 0,
         conPublicacionesRepositorio: conRepositorio,
         sinPublicacionesRepositorio: sinRepositorio,
         distribucionProcedencia: stats.distribucionProcedencia || distProcFallback,
@@ -196,8 +242,9 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
 
     // Synthesize from docentes if available
     const total = docentes.length;
-    const encuestados = docentes.filter(d => d.encuestado === 1).length;
-    const pendientes = Math.max(0, total - encuestados);
+    const encuestados = censadosList.length;
+    const enProgreso = enProgresoList.length;
+    const pendientes = pendientesList.length;
     const pct = total > 0 ? Math.round((encuestados / total) * 100) : 0;
 
     // Filtrar docentes con información académica real o censados
@@ -252,6 +299,7 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
     return {
       totalDocentes: total,
       totalEncuestados: encuestados,
+      totalEnProgreso: enProgreso,
       totalPendientes: pendientes,
       porcentajesEncuestados: pct,
       totalDoctores: docentes.filter(d => d.posee_doctorado === 1).length,
@@ -261,10 +309,10 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
       distribucionNivelAcademico: Object.keys(nivelesMap).map(k => ({ nivel: k, total: nivelesMap[k] })),
       distribucionPNF: distPnf,
       conComponenteDocente: docentes.filter(d => d.componente_docente === 1).length,
-      sinComponenteDocente: docentes.filter(d => d.componente_docente === 0 && d.encuestado === 1).length,
+      sinComponenteDocente: docentes.filter(d => d.componente_docente === 0 && getEstadoCenso(d) === 'CENSADO').length,
       enRecitven: docentes.filter(d => d.usuario_recitven === 1).length,
       conPublicacionesRepositorio: docentes.filter(d => d.publicaciones_repositorio === 1).length,
-      sinPublicacionesRepositorio: docentes.filter(d => (d.publicaciones_repositorio === 0 || !d.publicaciones_repositorio) && d.encuestado === 1).length,
+      sinPublicacionesRepositorio: docentes.filter(d => (d.publicaciones_repositorio === 0 || !d.publicaciones_repositorio) && getEstadoCenso(d) === 'CENSADO').length,
       colegiados: docentes.filter(d => d.colegiado === 1).length,
       conPublicacionesLibros: docentes.filter(d => d.publicaciones_libros === 1).length,
       conPublicacionesArticulos: docentes.filter(d => d.publicaciones_articulos === 1).length,
@@ -288,6 +336,174 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
       </div>
     );
   }
+
+  // Docentes para el Collapse de las 4 Tarjetas de Métricas Clave
+  const kpiDocentesList = useMemo(() => {
+    if (!expandedKpi) return [];
+
+    let list: Docente[] = [];
+    if (expandedKpi === 'activos') {
+      if (kpiSubFilter === 'CENSADOS') {
+        list = docentes.filter(d => getEstadoCenso(d) === 'CENSADO');
+      } else if (kpiSubFilter === 'EN_PROGRESO') {
+        list = docentes.filter(d => getEstadoCenso(d) === 'EN_PROGRESO');
+      } else if (kpiSubFilter === 'PENDIENTES') {
+        list = docentes.filter(d => getEstadoCenso(d) === 'PENDIENTE');
+      } else {
+        list = docentes;
+      }
+    } else if (expandedKpi === 'postgrado') {
+      if (kpiSubFilter === 'DOCTORES') {
+        list = docentes.filter(d => d.posee_doctorado === 1);
+      } else if (kpiSubFilter === 'MAGISTERES') {
+        list = docentes.filter(d => d.posee_maestria === 1);
+      } else if (kpiSubFilter === 'ESPECIALISTAS') {
+        list = docentes.filter(d => d.posee_especialidad === 1);
+      } else {
+        list = docentes.filter(
+          d => d.posee_doctorado === 1 || d.posee_maestria === 1 || d.posee_especialidad === 1
+        );
+      }
+    } else if (expandedKpi === 'investigacion') {
+      if (kpiSubFilter === 'RECITVEN') {
+        list = docentes.filter(d => d.usuario_recitven === 1);
+      } else if (kpiSubFilter === 'PROYECTOS') {
+        list = docentes.filter(d => d.investigacion_en_desarrollo === 1);
+      } else if (kpiSubFilter === 'REPOSITORIO') {
+        list = docentes.filter(d => d.publicaciones_repositorio === 1);
+      } else {
+        list = docentes.filter(
+          d =>
+            d.usuario_recitven === 1 ||
+            d.investigacion_en_desarrollo === 1 ||
+            d.publicaciones_repositorio === 1
+        );
+      }
+    } else if (expandedKpi === 'produccion') {
+      if (kpiSubFilter === 'LIBROS') {
+        list = docentes.filter(d => d.publicaciones_libros === 1);
+      } else if (kpiSubFilter === 'ARTICULOS') {
+        list = docentes.filter(d => d.publicaciones_articulos === 1);
+      } else if (kpiSubFilter === 'REPOSITORIO') {
+        list = docentes.filter(d => d.publicaciones_repositorio === 1);
+      } else {
+        list = docentes.filter(
+          d =>
+            d.publicaciones_libros === 1 ||
+            d.publicaciones_articulos === 1 ||
+            d.publicaciones_repositorio === 1
+        );
+      }
+    }
+
+    if (searchKpi.trim()) {
+      const q = searchKpi.toLowerCase().trim();
+      list = list.filter(
+        d =>
+          (d.nombre_completo || '').toLowerCase().includes(q) ||
+          (d.cedula || '').toLowerCase().includes(q) ||
+          (d.carrera_pregrado || '').toLowerCase().includes(q) ||
+          (d.cargo || '').toLowerCase().includes(q)
+      );
+    }
+
+    return list;
+  }, [expandedKpi, kpiSubFilter, searchKpi, docentes]);
+
+  // Analítica de Trayectoria Directiva y Cargos Públicos
+  const analyticsDirectivos = useMemo(() => {
+    const directoresUptpc = docentes.filter(d => d.fue_director_uptpc === 1);
+    const directoresExternos = docentes.filter(d => d.fue_director_externo === 1);
+    const directivosUptpcActual = docentes.filter(d => d.cargo_directivo_uptpc_actual === 1);
+    const directivosExternosActual = docentes.filter(d => d.cargo_directivo_externo_actual === 1);
+    const cargosPoliticos = docentes.filter(d => d.cargo_politico_actual === 1);
+
+    // Conteo por unidades directivas actuales UPTPC
+    const unidadesActualesMap: Record<string, number> = {};
+    directivosUptpcActual.forEach(d => {
+      const arr = parseJsonArray<string>(d.cargos_directivos_uptpc);
+      arr.forEach(u => {
+        if (u && String(u).trim()) {
+          const clean = String(u).trim();
+          unidadesActualesMap[clean] = (unidadesActualesMap[clean] || 0) + 1;
+        }
+      });
+    });
+
+    const unidadesActualesSorted = Object.entries(unidadesActualesMap)
+      .map(([unidad, total]) => ({ unidad, total }))
+      .sort((a, b) => b.total - a.total);
+
+    // Conteo por unidades históricas UPTPC
+    const unidadesHistoricasMap: Record<string, number> = {};
+    directoresUptpc.forEach(d => {
+      const arr = parseJsonArray<string>(d.director_uptpc_unidades);
+      arr.forEach(u => {
+        if (u && String(u).trim()) {
+          const clean = String(u).trim();
+          unidadesHistoricasMap[clean] = (unidadesHistoricasMap[clean] || 0) + 1;
+        }
+      });
+    });
+
+    const unidadesHistoricasSorted = Object.entries(unidadesHistoricasMap)
+      .map(([unidad, total]) => ({ unidad, total }))
+      .sort((a, b) => b.total - a.total);
+
+    return {
+      directoresUptpc,
+      directoresExternos,
+      directivosUptpcActual,
+      directivosExternosActual,
+      cargosPoliticos,
+      unidadesActualesSorted,
+      unidadesHistoricasSorted,
+    };
+  }, [docentes]);
+
+  // Dataset Gráfico 1: Panorama Global de Liderazgo
+  const dataResumenDirectivo = {
+    labels: [
+      'Directores Históricos UPTPC',
+      'Cargos Directivos Actuales UPTPC',
+      'Directores Fuera UPTPC',
+      'Directivos Actuales Fuera',
+      'Cargos Políticos Activos',
+    ],
+    datasets: [
+      {
+        label: 'Docentes en Roles de Gestión',
+        data: [
+          analyticsDirectivos.directoresUptpc.length,
+          analyticsDirectivos.directivosUptpcActual.length,
+          analyticsDirectivos.directoresExternos.length,
+          analyticsDirectivos.directivosExternosActual.length,
+          analyticsDirectivos.cargosPoliticos.length,
+        ],
+        backgroundColor: ['#0B4D94', '#0284C7', '#7C3AED', '#8B5CF6', '#DC2626'],
+        borderRadius: 8,
+      },
+    ],
+  };
+
+  // Dataset Gráfico 2: Desglose de Cargos Directivos Actuales en UPTPC
+  const dataUnidadesActuales = {
+    labels:
+      analyticsDirectivos.unidadesActualesSorted.length > 0
+        ? analyticsDirectivos.unidadesActualesSorted.map(u => u.unidad)
+        : ['Sin directivos registrados aún'],
+    datasets: [
+      {
+        label: 'Docentes en la Unidad',
+        data:
+          analyticsDirectivos.unidadesActualesSorted.length > 0
+            ? analyticsDirectivos.unidadesActualesSorted.map(u => u.total)
+            : [0],
+        backgroundColor: '#0B4D94',
+        borderRadius: 6,
+      },
+    ],
+  };
 
   // Vibrant chart colors
   const vibrantColors = [
@@ -816,8 +1032,9 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
   // FILTERING LOGIC
   // ==========================================
 
-  // Filtered teachers for drilldown in Profesiones
+  // Filtered teachers for drilldown in Profesiones: ONLY CENSADOS (> 90%)
   const filteredDocentes = docentes.filter(d => {
+    if (getEstadoCenso(d) !== 'CENSADO') return false;
     if (selectedProfesion && (d.tipo_profesion || '').toUpperCase() !== selectedProfesion.toUpperCase()) {
       return false;
     }
@@ -1065,132 +1282,421 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
       {/* TARJETAS DE MÉTRICAS CLAVE */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Docentes */}
-        <div className="card-white p-5 card-hover border-t-4 border-t-[#0B4D94]">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Docentes Activos</span>
-            <div className="p-2.5 bg-blue-50 text-[#0B4D94] rounded-xl">
-              <Users className="w-5 h-5" />
+        <div className="card-white p-5 card-hover border-t-4 border-t-[#0B4D94] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Docentes Activos</span>
+              <div className="p-2.5 bg-blue-50 text-[#0B4D94] rounded-xl">
+                <Users className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">{effectiveStats.totalDocentes}</p>
+              <p className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-1">
+                <span className="font-semibold text-emerald-700">{effectiveStats.totalEncuestados} censados</span>
+                <span>•</span>
+                <span className="font-semibold text-blue-700">{effectiveStats.totalEnProgreso || 0} en progreso</span>
+                <span>•</span>
+                <span className="text-amber-600 font-medium">{effectiveStats.totalPendientes} pendientes</span>
+              </p>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden flex">
+              <div
+                className="bg-emerald-600 h-1.5 transition-all duration-500"
+                style={{ width: `${effectiveStats.porcentajesEncuestados}%` }}
+                title={`Censados (>90%): ${effectiveStats.porcentajesEncuestados}%`}
+              ></div>
+              <div
+                className="bg-blue-400 h-1.5 transition-all duration-500"
+                style={{
+                  width: `${
+                    effectiveStats.totalDocentes > 0
+                      ? Math.round(((effectiveStats.totalEnProgreso || 0) / effectiveStats.totalDocentes) * 100)
+                      : 0
+                  }%`,
+                }}
+                title={`En progreso: ${effectiveStats.totalEnProgreso || 0}`}
+              ></div>
             </div>
           </div>
-          <div className="mt-3">
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">{effectiveStats.totalDocentes}</p>
-            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-              <span className="font-semibold text-slate-700">{effectiveStats.totalEncuestados} censados</span>
-              <span>•</span>
-              <span className="text-amber-600 font-medium">{effectiveStats.totalPendientes} pendientes</span>
-            </p>
-          </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
-            <div
-              className="bg-[#0B4D94] h-1.5 rounded-full transition-all duration-500"
-              style={{ width: `${effectiveStats.porcentajesEncuestados}%` }}
-            ></div>
-          </div>
+
+          <button
+            type="button"
+            onClick={() => toggleKpi('activos')}
+            className={`mt-4 pt-2.5 border-t border-slate-100 w-full flex items-center justify-between text-xs font-bold transition-colors cursor-pointer ${
+              expandedKpi === 'activos' ? 'text-[#0B4D94] bg-blue-50/60 -mx-5 -mb-5 p-3 rounded-b-xl' : 'text-[#0B4D94] hover:underline'
+            }`}
+          >
+            <span>{expandedKpi === 'activos' ? 'Ocultar nómina' : 'Ver docentes'}</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${expandedKpi === 'activos' ? 'rotate-180' : ''}`} />
+          </button>
         </div>
 
         {/* Card 2: Postgrados */}
-        <div className="card-white p-5 card-hover border-t-4 border-t-purple-600">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Nivel Postgrado</span>
-            <div className="p-2.5 bg-purple-50 text-purple-600 rounded-xl">
-              <GraduationCap className="w-5 h-5" />
+        <div className="card-white p-5 card-hover border-t-4 border-t-purple-600 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Nivel Postgrado</span>
+              <div className="p-2.5 bg-purple-50 text-purple-600 rounded-xl">
+                <GraduationCap className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <p className="text-2xl sm:text-3xl font-extrabold text-purple-900">
+                {(effectiveStats.totalDoctores || 0) + (effectiveStats.totalMagisteres || 0)}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                <span className="font-semibold text-purple-700">{effectiveStats.totalDoctores || 0} Doctores</span> •{' '}
+                <span>{effectiveStats.totalMagisteres || 0} Magísteres</span>
+              </p>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
+              <div
+                className="bg-purple-600 h-1.5 rounded-full"
+                style={{
+                  width: `${
+                    effectiveStats.totalDocentes > 0
+                      ? (((effectiveStats.totalDoctores || 0) + (effectiveStats.totalMagisteres || 0)) /
+                          effectiveStats.totalDocentes) *
+                        100
+                      : 0
+                  }%`,
+                }}
+              ></div>
             </div>
           </div>
-          <div className="mt-3">
-            <p className="text-2xl sm:text-3xl font-extrabold text-purple-900">
-              {(effectiveStats.totalDoctores || 0) + (effectiveStats.totalMagisteres || 0)}
-            </p>
-            <p className="text-xs text-slate-500 mt-1">
-              <span className="font-semibold text-purple-700">{effectiveStats.totalDoctores || 0} Doctores</span> •{' '}
-              <span>{effectiveStats.totalMagisteres || 0} Magísteres</span>
-            </p>
-          </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
-            <div
-              className="bg-purple-600 h-1.5 rounded-full"
-              style={{
-                width: `${
-                  effectiveStats.totalDocentes > 0
-                    ? (((effectiveStats.totalDoctores || 0) + (effectiveStats.totalMagisteres || 0)) /
-                        effectiveStats.totalDocentes) *
-                      100
-                    : 0
-                }%`,
-              }}
-            ></div>
-          </div>
+
+          <button
+            type="button"
+            onClick={() => toggleKpi('postgrado')}
+            className={`mt-4 pt-2.5 border-t border-slate-100 w-full flex items-center justify-between text-xs font-bold transition-colors cursor-pointer ${
+              expandedKpi === 'postgrado' ? 'text-purple-800 bg-purple-50/60 -mx-5 -mb-5 p-3 rounded-b-xl' : 'text-purple-700 hover:underline'
+            }`}
+          >
+            <span>{expandedKpi === 'postgrado' ? 'Ocultar docentes' : 'Ver docentes'}</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${expandedKpi === 'postgrado' ? 'rotate-180' : ''}`} />
+          </button>
         </div>
 
         {/* Card 3: Investigación & RECITVEN */}
-        <div className="card-white p-5 card-hover border-t-4 border-t-emerald-600">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">I+D+i y RECITVEN</span>
-            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
-              <Atom className="w-5 h-5" />
+        <div className="card-white p-5 card-hover border-t-4 border-t-emerald-600 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">I+D+i y RECITVEN</span>
+              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+                <Atom className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <p className="text-2xl sm:text-3xl font-extrabold text-emerald-900">{effectiveStats.enRecitven}</p>
+              <p className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-1">
+                <span className="font-semibold text-emerald-700">
+                  {effectiveStats.conInvestigacionActiva} proyectos
+                </span>
+                <span>•</span>
+                <span className="font-semibold text-blue-700">
+                  {effectiveStats.conPublicacionesRepositorio || 0} en Repositorio
+                </span>
+              </p>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
+              <div
+                className="bg-emerald-600 h-1.5 rounded-full"
+                style={{
+                  width: `${
+                    effectiveStats.totalDocentes > 0
+                      ? (effectiveStats.enRecitven / effectiveStats.totalDocentes) * 100
+                      : 0
+                  }%`,
+                }}
+              ></div>
             </div>
           </div>
-          <div className="mt-3">
-            <p className="text-2xl sm:text-3xl font-extrabold text-emerald-900">{effectiveStats.enRecitven}</p>
-            <p className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-1">
-              <span className="font-semibold text-emerald-700">
-                {effectiveStats.conInvestigacionActiva} proyectos
-              </span>
-              <span>•</span>
-              <span className="font-semibold text-blue-700">
-                {effectiveStats.conPublicacionesRepositorio || 0} en Repositorio
-              </span>
-            </p>
-          </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
-            <div
-              className="bg-emerald-600 h-1.5 rounded-full"
-              style={{
-                width: `${
-                  effectiveStats.totalDocentes > 0
-                    ? (effectiveStats.enRecitven / effectiveStats.totalDocentes) * 100
-                    : 0
-                }%`,
-              }}
-            ></div>
-          </div>
+
+          <button
+            type="button"
+            onClick={() => toggleKpi('investigacion')}
+            className={`mt-4 pt-2.5 border-t border-slate-100 w-full flex items-center justify-between text-xs font-bold transition-colors cursor-pointer ${
+              expandedKpi === 'investigacion' ? 'text-emerald-800 bg-emerald-50/60 -mx-5 -mb-5 p-3 rounded-b-xl' : 'text-emerald-700 hover:underline'
+            }`}
+          >
+            <span>{expandedKpi === 'investigacion' ? 'Ocultar investigadores' : 'Ver docentes'}</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${expandedKpi === 'investigacion' ? 'rotate-180' : ''}`} />
+          </button>
         </div>
 
         {/* Card 4: Producción & Repositorio */}
-        <div className="card-white p-5 card-hover border-t-4 border-t-amber-500">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Producción & Repositorio</span>
-            <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
-              <BookOpen className="w-5 h-5" />
+        <div className="card-white p-5 card-hover border-t-4 border-t-amber-500 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Producción & Repositorio</span>
+              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
+                <BookOpen className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <p className="text-2xl sm:text-3xl font-extrabold text-amber-900">
+                {(effectiveStats.conPublicacionesLibros || 0) + (effectiveStats.conPublicacionesArticulos || 0) + (effectiveStats.conPublicacionesRepositorio || 0)}
+              </p>
+              <p className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-1">
+                <span className="font-semibold text-amber-700">{effectiveStats.conPublicacionesLibros} Libros</span> •{' '}
+                <span>{effectiveStats.conPublicacionesArticulos} Artículos</span> •{' '}
+                <span className="font-semibold text-[#0B4D94]">{effectiveStats.conPublicacionesRepositorio || 0} Repositorio</span>
+              </p>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
+              <div
+                className="bg-amber-500 h-1.5 rounded-full"
+                style={{
+                  width: `${
+                    effectiveStats.totalDocentes > 0
+                      ? (((effectiveStats.conPublicacionesLibros || 0) +
+                          (effectiveStats.conPublicacionesArticulos || 0) +
+                          (effectiveStats.conPublicacionesRepositorio || 0)) /
+                          effectiveStats.totalDocentes) *
+                        100
+                      : 0
+                  }%`,
+                }}
+              ></div>
             </div>
           </div>
-          <div className="mt-3">
-            <p className="text-2xl sm:text-3xl font-extrabold text-amber-900">
-              {(effectiveStats.conPublicacionesLibros || 0) + (effectiveStats.conPublicacionesArticulos || 0) + (effectiveStats.conPublicacionesRepositorio || 0)}
-            </p>
-            <p className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-1">
-              <span className="font-semibold text-amber-700">{effectiveStats.conPublicacionesLibros} Libros</span> •{' '}
-              <span>{effectiveStats.conPublicacionesArticulos} Artículos</span> •{' '}
-              <span className="font-semibold text-[#0B4D94]">{effectiveStats.conPublicacionesRepositorio || 0} Repositorio</span>
-            </p>
-          </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5 mt-3 overflow-hidden">
-            <div
-              className="bg-amber-500 h-1.5 rounded-full"
-              style={{
-                width: `${
-                  effectiveStats.totalDocentes > 0
-                    ? (((effectiveStats.conPublicacionesLibros || 0) +
-                        (effectiveStats.conPublicacionesArticulos || 0) +
-                        (effectiveStats.conPublicacionesRepositorio || 0)) /
-                        effectiveStats.totalDocentes) *
-                      100
-                    : 0
-                }%`,
-              }}
-            ></div>
-          </div>
+
+          <button
+            type="button"
+            onClick={() => toggleKpi('produccion')}
+            className={`mt-4 pt-2.5 border-t border-slate-100 w-full flex items-center justify-between text-xs font-bold transition-colors cursor-pointer ${
+              expandedKpi === 'produccion' ? 'text-amber-800 bg-amber-50/60 -mx-5 -mb-5 p-3 rounded-b-xl' : 'text-amber-700 hover:underline'
+            }`}
+          >
+            <span>{expandedKpi === 'produccion' ? 'Ocultar autores' : 'Ver docentes'}</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${expandedKpi === 'produccion' ? 'rotate-180' : ''}`} />
+          </button>
         </div>
       </section>
+
+      {/* PANEL DESPLEGABLE TIPO COLLAPSE PARA LAS TARJETAS DE MÉTRICAS */}
+      {expandedKpi && (
+        <section className="card-white p-5 sm:p-6 border-2 border-[#0B4D94]/30 shadow-lg rounded-2xl animate-fade-in space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0B4D94] uppercase tracking-wider mb-0.5">
+                <Users className="w-4 h-4" />
+                <span>
+                  {expandedKpi === 'activos' && 'Docentes Activos de la Nómina Institucional'}
+                  {expandedKpi === 'postgrado' && 'Docentes con Títulos de Postgrado Universitario'}
+                  {expandedKpi === 'investigacion' && 'Docentes en I+D+i, RECITVEN y Repositorio UPTPC'}
+                  {expandedKpi === 'produccion' && 'Docentes con Producción Intelectual y Publicaciones'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Haga clic en cualquier docente para desplegar su ficha y credenciales institucionales completas.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Buscar docente o cédula..."
+                  value={searchKpi}
+                  onChange={e => setSearchKpi(e.target.value)}
+                  className="text-xs border border-slate-300 rounded-lg pl-7 pr-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#0B4D94] w-48 sm:w-56"
+                />
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2.5 pointer-events-none" />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setExpandedKpi(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors border border-slate-200"
+                title="Cerrar panel"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Subfiltros por categoría dentro de la tarjeta expandida */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-bold text-slate-500">Filtrar:</span>
+            {expandedKpi === 'activos' && (
+              <>
+                {[
+                  { id: 'TODOS', label: `Todos (${docentes.length})` },
+                  { id: 'CENSADOS', label: `Censados >90% (${docentes.filter(d => getEstadoCenso(d) === 'CENSADO').length})` },
+                  { id: 'EN_PROGRESO', label: `En Progreso (${docentes.filter(d => getEstadoCenso(d) === 'EN_PROGRESO').length})` },
+                  { id: 'PENDIENTES', label: `Pendientes (${docentes.filter(d => getEstadoCenso(d) === 'PENDIENTE').length})` },
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setKpiSubFilter(f.id)}
+                    className={`text-xs px-3 py-1 rounded-lg font-semibold transition-all ${
+                      kpiSubFilter === f.id
+                        ? 'bg-[#0B4D94] text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </>
+            )}
+
+            {expandedKpi === 'postgrado' && (
+              <>
+                {[
+                  { id: 'TODOS', label: 'Todos con Postgrado' },
+                  { id: 'DOCTORES', label: `Doctores (${docentes.filter(d => d.posee_doctorado === 1).length})` },
+                  { id: 'MAGISTERES', label: `Magísteres (${docentes.filter(d => d.posee_maestria === 1).length})` },
+                  { id: 'ESPECIALISTAS', label: `Especialistas (${docentes.filter(d => d.posee_especialidad === 1).length})` },
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setKpiSubFilter(f.id)}
+                    className={`text-xs px-3 py-1 rounded-lg font-semibold transition-all ${
+                      kpiSubFilter === f.id
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </>
+            )}
+
+            {expandedKpi === 'investigacion' && (
+              <>
+                {[
+                  { id: 'TODOS', label: 'Todos en I+D+i' },
+                  { id: 'RECITVEN', label: `En RECITVEN (${docentes.filter(d => d.usuario_recitven === 1).length})` },
+                  { id: 'PROYECTOS', label: `Proyectos Activos (${docentes.filter(d => d.investigacion_en_desarrollo === 1).length})` },
+                  { id: 'REPOSITORIO', label: `En Repositorio (${docentes.filter(d => d.publicaciones_repositorio === 1).length})` },
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setKpiSubFilter(f.id)}
+                    className={`text-xs px-3 py-1 rounded-lg font-semibold transition-all ${
+                      kpiSubFilter === f.id
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </>
+            )}
+
+            {expandedKpi === 'produccion' && (
+              <>
+                {[
+                  { id: 'TODOS', label: 'Todos con Publicaciones' },
+                  { id: 'LIBROS', label: `Libros (${docentes.filter(d => d.publicaciones_libros === 1).length})` },
+                  { id: 'ARTICULOS', label: `Artículos (${docentes.filter(d => d.publicaciones_articulos === 1).length})` },
+                  { id: 'REPOSITORIO', label: `Repositorio (${docentes.filter(d => d.publicaciones_repositorio === 1).length})` },
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setKpiSubFilter(f.id)}
+                    className={`text-xs px-3 py-1 rounded-lg font-semibold transition-all ${
+                      kpiSubFilter === f.id
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </>
+            )}
+
+            <span className="text-[11px] text-slate-400 ml-auto">
+              {kpiDocentesList.length} docente{kpiDocentesList.length === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          {/* Grilla Nominal de Docentes del Collapse */}
+          {kpiDocentesList.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-xs">
+              No se encontraron docentes con los criterios seleccionados en esta sección.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto pr-1">
+              {kpiDocentesList.map(d => {
+                const est = getEstadoCenso(d);
+                const pct = getPorcentajeCenso(d);
+                return (
+                  <div
+                    key={d.cedula}
+                    onClick={() => onSelectDocente(d)}
+                    className="p-3 bg-white border border-slate-200 hover:border-[#0B4D94] rounded-xl hover:shadow-sm cursor-pointer transition-all flex items-start gap-3 group"
+                  >
+                    {d.foto_url ? (
+                      <img
+                        src={d.foto_url}
+                        alt={d.nombre_completo}
+                        className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-blue-100 text-[#0B4D94] font-bold text-xs flex items-center justify-center shrink-0">
+                        {d.nombres?.[0] || d.nombre_completo?.[0] || 'D'}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-xs text-slate-900 group-hover:text-[#0B4D94] transition-colors truncate">
+                        {d.nombre_completo}
+                      </p>
+                      <p className="text-[11px] text-slate-500 font-mono">C.I. {d.cedula}</p>
+                      <p className="text-[11px] text-slate-600 truncate mt-0.5">
+                        {d.carrera_pregrado || d.tipo_profesion || d.cargo || 'DOCENTE'}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-1 mt-1.5">
+                        {est === 'CENSADO' && (
+                          <span className="text-[9px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-1.5 py-0.2 rounded">
+                            Censado ({pct}%)
+                          </span>
+                        )}
+                        {est === 'EN_PROGRESO' && (
+                          <span className="text-[9px] font-bold bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.2 rounded">
+                            En progreso ({pct}%)
+                          </span>
+                        )}
+                        {est === 'PENDIENTE' && (
+                          <span className="text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.2 rounded">
+                            Pendiente
+                          </span>
+                        )}
+                        {d.posee_doctorado === 1 && (
+                          <span className="text-[9px] font-bold bg-purple-100 text-purple-800 px-1.5 py-0.2 rounded">
+                            PhD
+                          </span>
+                        )}
+                        {d.posee_maestria === 1 && d.posee_doctorado !== 1 && (
+                          <span className="text-[9px] font-bold bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded">
+                            MSc
+                          </span>
+                        )}
+                        {d.usuario_recitven === 1 && (
+                          <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded">
+                            RECITVEN
+                          </span>
+                        )}
+                        {d.publicaciones_repositorio === 1 && (
+                          <span className="text-[9px] font-bold bg-blue-100 text-[#0B4D94] px-1.5 py-0.2 rounded">
+                            Repositorio
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* SECCIÓN 1: EXPLORADOR DE CONGLOMERADOS PROFESIONALES (DOUGHNUT + RAMAS + LISTADO) */}
       <section id="drilldown-profesiones" className="card-white p-6 sm:p-8 space-y-6">
@@ -3101,6 +3607,326 @@ export const Observatorio: React.FC<ObservatorioProps> = ({
           </div>
         </section>
       )}
+
+      {/* SECCIÓN 6: LIDERAZGO INSTITUCIONAL, TRAYECTORIA DIRECTIVA Y RESPONSABILIDAD PÚBLICA */}
+      <section className="card-white p-6 sm:p-8 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          <div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0B4D94] uppercase tracking-wider mb-1">
+              <Landmark className="w-4 h-4" />
+              <span>Gestión, Gobernanza Universitaria y Responsabilidad Pública</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900">
+              Trayectoria Directiva y Liderazgo Institucional
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Monitoreo del talento docente con roles de dirección universitaria, experiencia directiva externa y cargos políticos.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+              UPTPC Puerto Cabello
+            </span>
+          </div>
+        </div>
+
+        {/* Métricas Rápidas Directivas */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl">
+            <div className="flex items-center justify-between text-[#0B4D94]">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Directores UPTPC</span>
+              <Landmark className="w-4 h-4" />
+            </div>
+            <p className="text-xl font-black text-slate-900 mt-1">{analyticsDirectivos.directoresUptpc.length}</p>
+            <p className="text-[10px] text-slate-500">Han sido directores en UPTPC</p>
+          </div>
+
+          <div className="p-3.5 bg-sky-50/70 border border-sky-200 rounded-xl">
+            <div className="flex items-center justify-between text-sky-800">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Directivos Actuales</span>
+              <Building2 className="w-4 h-4" />
+            </div>
+            <p className="text-xl font-black text-slate-900 mt-1">{analyticsDirectivos.directivosUptpcActual.length}</p>
+            <p className="text-[10px] text-slate-500">Cargo directivo hoy en UPTPC</p>
+          </div>
+
+          <div className="p-3.5 bg-purple-50/70 border border-purple-200 rounded-xl">
+            <div className="flex items-center justify-between text-purple-800">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Directores Externos</span>
+              <Briefcase className="w-4 h-4" />
+            </div>
+            <p className="text-xl font-black text-slate-900 mt-1">{analyticsDirectivos.directoresExternos.length}</p>
+            <p className="text-[10px] text-slate-500">Dirección fuera de la UPTPC</p>
+          </div>
+
+          <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-xl">
+            <div className="flex items-center justify-between text-indigo-800">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Directivos Ext. Hoy</span>
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <p className="text-xl font-black text-slate-900 mt-1">{analyticsDirectivos.directivosExternosActual.length}</p>
+            <p className="text-[10px] text-slate-500">Directivos activos fuera</p>
+          </div>
+
+          <div className="p-3.5 bg-rose-50/70 border border-rose-200 rounded-xl">
+            <div className="flex items-center justify-between text-rose-800">
+              <span className="text-[11px] font-bold uppercase tracking-wider">Cargos Políticos</span>
+              <Vote className="w-4 h-4" />
+            </div>
+            <p className="text-xl font-black text-slate-900 mt-1">{analyticsDirectivos.cargosPoliticos.length}</p>
+            <p className="text-[10px] text-slate-500">Cargos políticos activos</p>
+          </div>
+        </div>
+
+        {/* Gráficos Chart.js de Liderazgo */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Gráfico 1: Panorama Global de Liderazgo */}
+          <div className="lg:col-span-6 p-4 sm:p-5 bg-white border border-slate-200 rounded-2xl shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <TrendingUp className="w-4 h-4 text-[#0B4D94]" />
+                <span>Panorama Global de Roles y Cargos</span>
+              </h4>
+              <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                Comparativa
+              </span>
+            </div>
+            <div className="h-64">
+              <Bar
+                data={dataResumenDirectivo}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      callbacks: {
+                        label: ctx => ` ${ctx.parsed.y} docentes`,
+                      },
+                    },
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      ticks: { precision: 0 },
+                    },
+                  },
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Gráfico 2: Desglose de Cargos Directivos Actuales en UPTPC */}
+          <div className="lg:col-span-6 p-4 sm:p-5 bg-white border border-slate-200 rounded-2xl shadow-2xs space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-[#0B4D94]" />
+                <span>Cargos Directivos Actuales en UPTPC por Unidad y PNF</span>
+              </h4>
+              <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+                {analyticsDirectivos.unidadesActualesSorted.length} unidades activas
+              </span>
+            </div>
+            <div className="h-64">
+              <Bar
+                data={dataUnidadesActuales}
+                options={{
+                  indexAxis: 'y' as const,
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      callbacks: {
+                        label: ctx => ` ${ctx.parsed.x} directivo(s)`,
+                      },
+                    },
+                  },
+                  scales: {
+                    x: {
+                      beginAtZero: true,
+                      ticks: { precision: 0 },
+                    },
+                  },
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Explorador Nominal Interactivo de Liderazgo */}
+        <div className="border border-slate-200 rounded-2xl p-4 sm:p-5 bg-white space-y-4 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <Users className="w-4 h-4 text-[#0B4D94]" />
+                <span>Lista Nominal de Docentes por Rol Directivo o Político</span>
+              </h4>
+              <p className="text-[11px] text-slate-500">Seleccione la categoría para explorar el listado de docentes.</p>
+            </div>
+
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Filtrar en esta lista..."
+                value={searchDirectivo}
+                onChange={e => setSearchDirectivo(e.target.value)}
+                className="text-xs border border-slate-300 rounded-lg pl-7 pr-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#0B4D94] w-48 sm:w-56"
+              />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2.5 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Botonera de pestañas */}
+          <div className="flex flex-wrap gap-2">
+            {[
+              { id: 'actual_uptpc', label: `Directivos Actuales UPTPC (${analyticsDirectivos.directivosUptpcActual.length})` },
+              { id: 'historico_uptpc', label: `Directores Históricos UPTPC (${analyticsDirectivos.directoresUptpc.length})` },
+              { id: 'actual_externo', label: `Directivos Actuales Fuera (${analyticsDirectivos.directivosExternosActual.length})` },
+              { id: 'historico_externo', label: `Directores Históricos Fuera (${analyticsDirectivos.directoresExternos.length})` },
+              { id: 'politico', label: `Cargos Políticos (${analyticsDirectivos.cargosPoliticos.length})` },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setDirectivoTab(tab.id as any)}
+                className={`text-xs px-3 py-1.5 rounded-xl font-semibold transition-all cursor-pointer ${
+                  directivoTab === tab.id
+                    ? 'bg-[#0B4D94] text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Listado de docentes para la pestaña seleccionada */}
+          {(() => {
+            let list: Docente[] = [];
+            if (directivoTab === 'actual_uptpc') list = analyticsDirectivos.directivosUptpcActual;
+            else if (directivoTab === 'historico_uptpc') list = analyticsDirectivos.directoresUptpc;
+            else if (directivoTab === 'actual_externo') list = analyticsDirectivos.directivosExternosActual;
+            else if (directivoTab === 'historico_externo') list = analyticsDirectivos.directoresExternos;
+            else if (directivoTab === 'politico') list = analyticsDirectivos.cargosPoliticos;
+
+            if (searchDirectivo.trim()) {
+              const q = searchDirectivo.toLowerCase().trim();
+              list = list.filter(
+                d =>
+                  (d.nombre_completo || '').toLowerCase().includes(q) ||
+                  (d.cedula || '').toLowerCase().includes(q) ||
+                  (d.cargo || '').toLowerCase().includes(q) ||
+                  (d.cargo_politico_detalle || '').toLowerCase().includes(q)
+              );
+            }
+
+            if (list.length === 0) {
+              return (
+                <div className="py-8 text-center text-slate-400 text-xs">
+                  No se encontraron docentes registrados en esta categoría de liderazgo.
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-y-auto pr-1">
+                {list.map(d => (
+                  <div
+                    key={d.cedula}
+                    onClick={() => onSelectDocente(d)}
+                    className="p-3.5 bg-slate-50 hover:bg-blue-50/60 border border-slate-200 hover:border-[#0B4D94] rounded-xl cursor-pointer transition-all flex flex-col justify-between space-y-2 group"
+                  >
+                    <div className="flex items-start gap-3">
+                      {d.foto_url ? (
+                        <img
+                          src={d.foto_url}
+                          alt={d.nombre_completo}
+                          className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-blue-100 text-[#0B4D94] font-bold text-xs flex items-center justify-center shrink-0">
+                          {d.nombres?.[0] || d.nombre_completo?.[0] || 'D'}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-xs text-slate-900 group-hover:text-[#0B4D94] transition-colors truncate">
+                          {d.nombre_completo}
+                        </p>
+                        <p className="text-[11px] text-slate-500 font-mono">C.I. {d.cedula}</p>
+                        <p className="text-[11px] text-slate-600 truncate mt-0.5">
+                          {d.cargo || 'DOCENTE'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Detalle específico según la pestaña */}
+                    <div className="pt-2 border-t border-slate-200/80 text-[11px]">
+                      {directivoTab === 'actual_uptpc' && (
+                        <div className="space-y-1">
+                          <span className="font-bold text-slate-700 block">Cargos Directivos en UPTPC:</span>
+                          <div className="flex flex-wrap gap-1">
+                            {parseJsonArray<string>(d.cargos_directivos_uptpc).map((u, i) => (
+                              <span key={i} className="bg-[#0B4D94] text-white text-[10px] font-semibold px-2 py-0.5 rounded shadow-2xs">
+                                {u}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {directivoTab === 'historico_uptpc' && (
+                        <div className="space-y-1">
+                          <span className="font-bold text-slate-700 block">Unidades dirigidas en UPTPC:</span>
+                          <div className="flex flex-wrap gap-1">
+                            {parseJsonArray<string>(d.director_uptpc_unidades).map((u, i) => (
+                              <span key={i} className="bg-blue-100 text-[#0B4D94] text-[10px] font-semibold px-2 py-0.5 rounded">
+                                {u}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {directivoTab === 'actual_externo' && (
+                        <div className="space-y-1">
+                          <span className="font-bold text-purple-900 block">Cargo Directivo Externo:</span>
+                          {parseJsonArray<ItemCargoExterno>(d.cargo_directivo_externo_detalle).map((c, i) => (
+                            <p key={i} className="text-slate-700">
+                              <strong>{c.cargo || 'Director'}</strong> en {c.institucion} ({c.tiempo || 'Activo'})
+                            </p>
+                          ))}
+                        </div>
+                      )}
+
+                      {directivoTab === 'historico_externo' && (
+                        <div className="space-y-1">
+                          <span className="font-bold text-purple-900 block">Dirección Fuera de la UPTPC:</span>
+                          {parseJsonArray<ItemCargoExterno>(d.director_externo_detalle).map((c, i) => (
+                            <p key={i} className="text-slate-700">
+                              <strong>{c.cargo || 'Director'}</strong> en {c.institucion} ({c.tiempo || 'Culminado'})
+                            </p>
+                          ))}
+                        </div>
+                      )}
+
+                      {directivoTab === 'politico' && (
+                        <div className="space-y-0.5 bg-rose-50/70 p-2 rounded-lg border border-rose-200">
+                          <span className="font-bold text-rose-900 block">Cargo Político:</span>
+                          <p className="text-rose-800 font-semibold">{d.cargo_politico_detalle || 'Cargo político'}</p>
+                          {d.cargo_politico_desde && (
+                            <p className="text-[10px] text-rose-600">Desde: {d.cargo_politico_desde}</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      </section>
     </div>
   );
 };

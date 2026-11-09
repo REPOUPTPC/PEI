@@ -19,6 +19,9 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { Docente, Usuario } from '@/lib/types';
+import { getEstadoCenso, getPorcentajeCenso } from '@/lib/censo';
+import { AvisoFotosPendientes } from './AvisoFotosPendientes';
+import { Camera } from 'lucide-react';
 import { useToast } from './Toast';
 
 interface DirectorioDocentesProps {
@@ -42,7 +45,7 @@ export const DirectorioDocentes: React.FC<DirectorioDocentesProps> = ({
 }) => {
   const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState(initialSearch);
-  const [filterEstadoCenso, setFilterEstadoCenso] = useState<'TODOS' | 'CENSADOS' | 'PENDIENTES'>('TODOS');
+  const [filterEstadoCenso, setFilterEstadoCenso] = useState<'TODOS' | 'CENSADOS' | 'EN_PROGRESO' | 'PENDIENTES'>('TODOS');
   const [filterProfesion, setFilterProfesion] = useState<string>('TODAS');
   const [deleteDocenteTarget, setDeleteDocenteTarget] = useState<Docente | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -66,8 +69,10 @@ export const DirectorioDocentes: React.FC<DirectorioDocentesProps> = ({
     }
 
     // Filter Censo Status
-    if (filterEstadoCenso === 'CENSADOS' && d.encuestado !== 1) return false;
-    if (filterEstadoCenso === 'PENDIENTES' && d.encuestado === 1) return false;
+    const est = getEstadoCenso(d);
+    if (filterEstadoCenso === 'CENSADOS' && est !== 'CENSADO') return false;
+    if (filterEstadoCenso === 'EN_PROGRESO' && est !== 'EN_PROGRESO') return false;
+    if (filterEstadoCenso === 'PENDIENTES' && est !== 'PENDIENTE') return false;
 
     // Filter Profession
     if (filterProfesion !== 'TODAS' && (d.tipo_profesion || '').toUpperCase() !== filterProfesion.toUpperCase()) {
@@ -212,6 +217,13 @@ export const DirectorioDocentes: React.FC<DirectorioDocentesProps> = ({
 
   return (
     <div className="card-white p-6 sm:p-8 space-y-6 animate-fade-in shadow-md">
+      {/* Aviso a encuestadores sobre fotos pendientes */}
+      <AvisoFotosPendientes
+        docentes={docentes}
+        currentUser={currentUser}
+        onCompletar={onEditDocente}
+      />
+
       {/* Header Directorio */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
@@ -340,7 +352,19 @@ export const DirectorioDocentes: React.FC<DirectorioDocentesProps> = ({
               }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Censados ({docentes.filter(d => d.encuestado === 1).length})</span>
+              <span>Censados ({docentes.filter(d => getEstadoCenso(d) === 'CENSADO').length})</span>
+            </button>
+
+            <button
+              onClick={() => setFilterEstadoCenso('EN_PROGRESO')}
+              className={`text-xs px-2.5 py-1 rounded-lg font-semibold transition-all flex items-center gap-1 ${
+                filterEstadoCenso === 'EN_PROGRESO'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-blue-50 text-blue-800 hover:bg-blue-100'
+              }`}
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>En Progreso ({docentes.filter(d => getEstadoCenso(d) === 'EN_PROGRESO').length})</span>
             </button>
 
             <button
@@ -352,7 +376,7 @@ export const DirectorioDocentes: React.FC<DirectorioDocentesProps> = ({
               }`}
             >
               <Clock className="w-3.5 h-3.5" />
-              <span>Pendientes ({docentes.filter(d => d.encuestado !== 1).length})</span>
+              <span>Pendientes ({docentes.filter(d => getEstadoCenso(d) === 'PENDIENTE').length})</span>
             </button>
           </div>
 
@@ -482,17 +506,42 @@ export const DirectorioDocentes: React.FC<DirectorioDocentesProps> = ({
 
                     {/* Estatus Censo */}
                     <td className="py-3 px-4">
-                      {d.encuestado === 1 ? (
-                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          <span>Censado</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                          <Clock className="w-3 h-3 text-amber-600" />
-                          <span>Pendiente</span>
-                        </span>
-                      )}
+                      {(() => {
+                        const est = getEstadoCenso(d);
+                        const pct = getPorcentajeCenso(d);
+                        const sinFoto = est !== 'PENDIENTE' && (!d.foto_url || !String(d.foto_url).trim());
+                        return (
+                          <div className="flex flex-col gap-1 items-start">
+                            {est === 'CENSADO' && (
+                              <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>Censado ({pct}%)</span>
+                              </span>
+                            )}
+                            {est === 'EN_PROGRESO' && (
+                              <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                <RefreshCw className="w-3 h-3 text-blue-600" />
+                                <span>En Progreso ({pct}%)</span>
+                              </span>
+                            )}
+                            {est === 'PENDIENTE' && (
+                              <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                <Clock className="w-3 h-3 text-amber-600" />
+                                <span>Pendiente</span>
+                              </span>
+                            )}
+                            {sinFoto && (
+                              <span
+                                className="inline-flex items-center gap-1 text-[9px] font-bold text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded"
+                                title="Falta tomar la fotografía al profesor"
+                              >
+                                <Camera className="w-2.5 h-2.5 text-rose-600" />
+                                <span>Sin foto</span>
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
 
                     {/* Acciones */}

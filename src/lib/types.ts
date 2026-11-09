@@ -240,6 +240,23 @@ export interface Docente {
   potencialidades?: string;
   observaciones?: string;
 
+  // Trayectoria directiva y cargos
+  fue_director_uptpc?: number; // 1: Ha sido director de alguna unidad de la UPTPC
+  director_uptpc_unidades?: string; // JSON de string[] (unidades dirigidas)
+  fue_director_externo?: number; // 1: Ha sido director fuera de la UPTPC
+  director_externo_detalle?: string; // JSON de ItemCargoExterno[]
+  cargo_directivo_uptpc_actual?: number; // 1: Ocupa cargo directivo actual en la UPTPC
+  cargos_directivos_uptpc?: string; // JSON de string[] (unidades / PNF)
+  cargo_directivo_externo_actual?: number; // 1: Ocupa cargo directivo actual fuera de la UPTPC
+  cargo_directivo_externo_detalle?: string; // JSON de ItemCargoExterno[]
+  cargo_politico_actual?: number; // 1: Ocupa cargo político actualmente
+  cargo_politico_detalle?: string; // Cuál
+  cargo_politico_desde?: string; // Desde qué fecha
+
+  // Completitud del censo (> 90% = censado)
+  porcentaje_completitud?: number | null;
+  censo_iniciado?: number; // 1: la planilla ya fue guardada al menos una vez
+
   encuestado?: number;
   registrado_por?: string;
   created_at?: string;
@@ -250,6 +267,8 @@ export interface ObservatorioStats {
   totalDocentes: number;
   totalEncuestados: number;
   totalPendientes: number;
+  totalEnProgreso?: number;
+  totalSinFoto?: number;
   porcentajesEncuestados: number;
   totalDoctores?: number;
   totalMagisteres?: number;

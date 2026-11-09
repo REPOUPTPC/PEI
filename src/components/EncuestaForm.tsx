@@ -46,6 +46,12 @@ import {
   UniversidadVenezuela,
 } from '@/lib/types';
 import { useToast } from './Toast';
+import {
+  calcularCompletitud,
+  UMBRAL_CENSO_COMPLETO,
+  UNIDADES_DIRECTIVAS_UPTPC,
+  ItemCargoExterno,
+} from '@/lib/censo';
 import { SearchableSelect } from './SearchableSelect';
 import { MultiSearchableSelect } from './MultiSearchableSelect';
 
@@ -186,6 +192,20 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
   const [diplomados, setDiplomados] = useState<ItemDiplomado[]>([]);
   const [potencialidades, setPotencialidades] = useState('');
   const [observaciones, setObservaciones] = useState('');
+
+  // 11. Trayectoria Directiva y Cargos
+  const [fueDirectorUptpc, setFueDirectorUptpc] = useState(false);
+  const [directorUptpcUnidades, setDirectorUptpcUnidades] = useState<string[]>([]);
+  const [fueDirectorExterno, setFueDirectorExterno] = useState(false);
+  const [directorExternoDetalle, setDirectorExternoDetalle] = useState<ItemCargoExterno[]>([]);
+  const [cargoDirectivoUptpcActual, setCargoDirectivoUptpcActual] = useState(false);
+  const [cargosDirectivosUptpc, setCargosDirectivosUptpc] = useState<string[]>([]);
+  const [cargoDirectivoExternoActual, setCargoDirectivoExternoActual] = useState(false);
+  const [cargoDirectivoExternoDetalle, setCargoDirectivoExternoDetalle] = useState<ItemCargoExterno[]>([]);
+  const [cargoPoliticoActual, setCargoPoliticoActual] = useState(false);
+  const [cargoPoliticoDetalle, setCargoPoliticoDetalle] = useState('');
+  const [cargoPoliticoDesde, setCargoPoliticoDesde] = useState('');
+  const [mostrarFaltantes, setMostrarFaltantes] = useState(false);
 
   // Load basic reference data
   useEffect(() => {
@@ -417,8 +437,42 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       setDiplomados(parseJsonSafe(initialDocente.diplomados_detalle));
       setPotencialidades(initialDocente.potencialidades || '');
       setObservaciones(initialDocente.observaciones || '');
+
+      hydrateTrayectoria(initialDocente);
     }
   }, [initialDocente]);
+
+  // Hidratar Trayectoria Directiva y Cargos
+  const hydrateTrayectoria = (doc: any) => {
+    setFueDirectorUptpc(doc.fue_director_uptpc === 1);
+    setDirectorUptpcUnidades(parseJsonSafe(doc.director_uptpc_unidades));
+    setFueDirectorExterno(doc.fue_director_externo === 1);
+    setDirectorExternoDetalle(parseJsonSafe(doc.director_externo_detalle));
+    setCargoDirectivoUptpcActual(doc.cargo_directivo_uptpc_actual === 1);
+    setCargosDirectivosUptpc(parseJsonSafe(doc.cargos_directivos_uptpc));
+    setCargoDirectivoExternoActual(doc.cargo_directivo_externo_actual === 1);
+    setCargoDirectivoExternoDetalle(parseJsonSafe(doc.cargo_directivo_externo_detalle));
+    setCargoPoliticoActual(doc.cargo_politico_actual === 1);
+    setCargoPoliticoDetalle(doc.cargo_politico_detalle || '');
+    setCargoPoliticoDesde(doc.cargo_politico_desde || '');
+  };
+
+  // Opciones de cargos directivos UPTPC: unidades administrativas + todos los PNF
+  const opcionesCargosUptpc = useMemo(() => {
+    const pnfNombres = pnfList.map(p => p.nombre).filter(n => !UNIDADES_DIRECTIVAS_UPTPC.includes(n));
+    return [...UNIDADES_DIRECTIVAS_UPTPC, ...pnfNombres];
+  }, [pnfList]);
+
+  const toggleEnLista = (lista: string[], valor: string) =>
+    lista.includes(valor) ? lista.filter(v => v !== valor) : [...lista, valor];
+
+  const nuevoCargoExterno = (): ItemCargoExterno => ({
+    institucion: '',
+    cargo: '',
+    fecha_inicio: '',
+    fecha_fin: '',
+    tiempo: '',
+  });
 
   const parseJsonSafe = (str?: string) => {
     if (!str) return [];
@@ -445,8 +499,12 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
           setNombreCompleto(doc.nombre_completo || '');
           setCargo(doc.cargo || 'DOCENTE');
           setDesde(doc.desde || '');
-          if (doc.encuestado === 1) {
-            showToast('info', 'Docente ya censado', 'Cargando datos previos para actualización.');
+          if (doc.encuestado === 1 || doc.censo_iniciado === 1) {
+            showToast(
+              'info',
+              doc.encuestado === 1 ? 'Docente ya censado' : 'Censo en progreso',
+              'Cargando datos previos para actualización.'
+            );
 
             if (doc.foto_url) setFotoUrl(doc.foto_url);
             if (doc.fecha_nacimiento) setFechaNacimiento(doc.fecha_nacimiento);
@@ -520,6 +578,8 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
             setConoceLineasPnf(doc.conoce_lineas_pnf === 1);
             setLineasPnfDetalle(doc.lineas_pnf_detalle || '');
             setSelectedAsignaturas(parseJsonSafe(doc.asignaturas_imparte));
+
+            hydrateTrayectoria(doc);
           } else {
             showToast('success', 'Docente Activo Reconocido', `${doc.nombre_completo} (${doc.cargo})`);
           }
@@ -882,17 +942,8 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
     }
   };
 
-  // Submit Handler
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!cedula.trim() || !nombreCompleto.trim()) {
-      showToast('error', 'Campos Obligatorios', 'Por favor ingrese la Cédula y el Nombre Completo del docente.');
-      return;
-    }
-
-    setLoading(true);
-
+  // Construcción del payload del censo (usado al guardar y para el medidor de completitud)
+  const buildPayload = () => {
     const estadoObj = estados.find(e => e.id_estado === Number(idEstado));
     const munObj = municipios.find(m => m.id_municipio === Number(idMunicipio));
     const parObj = parroquias.find(p => p.id_parroquia === Number(idParroquia));
@@ -996,8 +1047,40 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
       potencialidades,
       observaciones,
 
+      // Trayectoria Directiva y Cargos
+      fue_director_uptpc: fueDirectorUptpc ? 1 : 0,
+      director_uptpc_unidades: fueDirectorUptpc ? directorUptpcUnidades : [],
+      fue_director_externo: fueDirectorExterno ? 1 : 0,
+      director_externo_detalle: fueDirectorExterno ? directorExternoDetalle : [],
+      cargo_directivo_uptpc_actual: cargoDirectivoUptpcActual ? 1 : 0,
+      cargos_directivos_uptpc: cargoDirectivoUptpcActual ? cargosDirectivosUptpc : [],
+      cargo_directivo_externo_actual: cargoDirectivoExternoActual ? 1 : 0,
+      cargo_directivo_externo_detalle: cargoDirectivoExternoActual ? cargoDirectivoExternoDetalle : [],
+      cargo_politico_actual: cargoPoliticoActual ? 1 : 0,
+      cargo_politico_detalle: cargoPoliticoActual ? cargoPoliticoDetalle : '',
+      cargo_politico_desde: cargoPoliticoActual ? cargoPoliticoDesde : '',
+
       registrado_por: currentUser?.username || 'ENCUESTADOR',
     };
+
+    return payload;
+  };
+
+  // Medidor de completitud en vivo (> 90% = planilla lista / censada)
+  const completitudActual = calcularCompletitud(buildPayload());
+
+  // Submit Handler
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!cedula.trim() || !nombreCompleto.trim()) {
+      showToast('error', 'Campos Obligatorios', 'Por favor ingrese la Cédula y el Nombre Completo del docente.');
+      return;
+    }
+
+    setLoading(true);
+
+    const payload = buildPayload();
 
     try {
       const res = await fetch('/api/docentes', {
@@ -1008,7 +1091,19 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
 
       const json = await res.json();
       if (json.success) {
-        showToast('success', 'Censo Completado', `La ficha de ${nombreCompleto} ha sido registrada con éxito.`);
+        const pct = json.completitud?.porcentaje ?? completitudActual.porcentaje;
+        if (json.completitud ? json.completitud.completo : completitudActual.completo) {
+          showToast('success', 'Censo Completado', `La ficha de ${nombreCompleto} ha sido registrada con éxito (${pct}%).`);
+        } else {
+          showToast(
+            'info',
+            'Avance Guardado',
+            `La planilla de ${nombreCompleto} quedó EN PROGRESO (${pct}%). Se considera censada al superar el ${UMBRAL_CENSO_COMPLETO}%.`
+          );
+        }
+        if (!payload.foto_url) {
+          showToast('info', 'Fotografía Pendiente', `Recuerde tomar la foto de ${nombreCompleto} para completar su perfil.`);
+        }
         onSuccess();
       } else {
         showToast('error', 'Error al guardar', json.error || 'Ocurrió un error');
@@ -1018,6 +1113,187 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  // ===== Helpers de render: Trayectoria Directiva y Cargos =====
+  const renderSiNo = (
+    value: boolean,
+    onChange: (v: boolean) => void,
+    textoSi: string,
+    textoNo: string
+  ) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {[true, false].map(opt => {
+        const active = value === opt;
+        return (
+          <div
+            key={String(opt)}
+            onClick={() => onChange(opt)}
+            className={`flex items-center gap-3 p-3 rounded-xl border text-xs font-medium cursor-pointer select-none transition-all ${
+              active
+                ? opt
+                  ? 'bg-blue-50/90 border-[#0B4D94] text-[#0B4D94] font-bold shadow-xs ring-1 ring-[#0B4D94]/30'
+                  : 'bg-slate-100 border-slate-400 text-slate-800 font-bold shadow-xs'
+                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            <div
+              className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                active ? (opt ? 'border-[#0B4D94] bg-[#0B4D94]' : 'border-slate-600 bg-slate-600') : 'border-slate-300 bg-white'
+              }`}
+            >
+              {active && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+            </div>
+            <span className="font-bold">{opt ? textoSi : textoNo}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderSelectorUnidades = (seleccion: string[], onChange: (v: string[]) => void) => (
+    <div className="space-y-2 animate-slide-in">
+      <div className="flex items-center justify-between">
+        <p className="text-[11px] font-bold text-slate-700">Seleccione una o varias opciones (selección múltiple):</p>
+        <span className="text-[10px] font-semibold text-[#0B4D94] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+          {seleccion.length} seleccionada{seleccion.length === 1 ? '' : 's'}
+        </span>
+      </div>
+      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Unidades de Gestión</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+        {UNIDADES_DIRECTIVAS_UPTPC.map(u => {
+          const checked = seleccion.includes(u);
+          return (
+            <div
+              key={u}
+              onClick={() => onChange(toggleEnLista(seleccion, u))}
+              className={`flex items-center gap-2 p-2.5 rounded-lg border text-[11px] cursor-pointer select-none transition-all ${
+                checked
+                  ? 'bg-blue-50/90 border-[#0B4D94] text-[#0B4D94] font-bold ring-1 ring-[#0B4D94]/30'
+                  : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <input type="checkbox" checked={checked} readOnly className="rounded text-[#0B4D94] pointer-events-none" />
+              <span className="leading-tight">{u}</span>
+            </div>
+          );
+        })}
+      </div>
+      {opcionesCargosUptpc.length > UNIDADES_DIRECTIVAS_UPTPC.length && (
+        <>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider pt-1">Programas de Formación (PNF)</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+            {opcionesCargosUptpc.slice(UNIDADES_DIRECTIVAS_UPTPC.length).map(u => {
+              const checked = seleccion.includes(u);
+              return (
+                <div
+                  key={u}
+                  onClick={() => onChange(toggleEnLista(seleccion, u))}
+                  className={`flex items-center gap-2 p-2.5 rounded-lg border text-[11px] cursor-pointer select-none transition-all ${
+                    checked
+                      ? 'bg-blue-50/90 border-[#0B4D94] text-[#0B4D94] font-bold ring-1 ring-[#0B4D94]/30'
+                      : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <input type="checkbox" checked={checked} readOnly className="rounded text-[#0B4D94] pointer-events-none" />
+                  <span className="leading-tight">{u}</span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  const renderCargosExternos = (
+    lista: ItemCargoExterno[],
+    setLista: (v: ItemCargoExterno[]) => void,
+    esHistorico: boolean
+  ) => {
+    const update = (i: number, field: keyof ItemCargoExterno, value: string) => {
+      const copy = [...lista];
+      copy[i] = { ...copy[i], [field]: value };
+      setLista(copy);
+    };
+    return (
+      <div className="space-y-2 animate-slide-in">
+        {lista.map((item, i) => (
+          <div key={i} className="p-3 bg-white border border-slate-200 rounded-lg space-y-2 relative">
+            <button
+              type="button"
+              onClick={() => setLista(lista.filter((_, idx) => idx !== i))}
+              className="absolute right-2 top-2 text-rose-500 hover:text-rose-700"
+              title="Quitar"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pr-6">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 mb-0.5">¿Dónde? (Institución / Organismo)</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Alcaldía de Puerto Cabello, Empresa X, Universidad Y"
+                  value={item.institucion}
+                  onChange={e => update(i, 'institucion', e.target.value)}
+                  className="w-full text-xs border border-slate-200 rounded p-1.5"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Unidad / Cargo</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Director de Planificación"
+                  value={item.cargo}
+                  onChange={e => update(i, 'cargo', e.target.value)}
+                  className="w-full text-xs border border-slate-200 rounded p-1.5"
+                />
+              </div>
+            </div>
+            <div className={`grid grid-cols-1 ${esHistorico ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-2`}>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Fecha de inicio</label>
+                <input
+                  type="date"
+                  value={item.fecha_inicio}
+                  onChange={e => update(i, 'fecha_inicio', e.target.value)}
+                  className="w-full text-xs border border-slate-200 rounded p-1.5"
+                />
+              </div>
+              {esHistorico && (
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Fecha de culminación</label>
+                  <input
+                    type="date"
+                    value={item.fecha_fin || ''}
+                    onChange={e => update(i, 'fecha_fin', e.target.value)}
+                    className="w-full text-xs border border-slate-200 rounded p-1.5"
+                  />
+                </div>
+              )}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-600 mb-0.5">Tiempo en el cargo</label>
+                <input
+                  type="text"
+                  placeholder="Ej. 2 años y 6 meses"
+                  value={item.tiempo}
+                  onChange={e => update(i, 'tiempo', e.target.value)}
+                  className="w-full text-xs border border-slate-200 rounded p-1.5"
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setLista([...lista, nuevoCargoExterno()])}
+          className="text-[11px] text-[#0B4D94] font-bold flex items-center gap-1 hover:underline"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>{lista.length === 0 ? 'Agregar cargo' : 'Agregar otro cargo'}</span>
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -3336,6 +3612,190 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
           </div>
         </section>
 
+        {/* BLOQUE 11: TRAYECTORIA DIRECTIVA Y CARGOS */}
+        <section className="space-y-4">
+          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
+            <span className="w-5 h-5 rounded-full bg-[#0B4D94] text-white text-xs flex items-center justify-center font-bold">
+              11
+            </span>
+            <span>Trayectoria Directiva y Cargos</span>
+          </h3>
+
+          {/* 11.1 Director de alguna unidad de la UPTPC */}
+          <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-3">
+            <label className="block text-xs font-bold text-slate-800">
+              ¿Ha sido Director(a) de alguna de las unidades de la UPTPC?
+            </label>
+            {renderSiNo(
+              fueDirectorUptpc,
+              v => {
+                setFueDirectorUptpc(v);
+                if (!v) setDirectorUptpcUnidades([]);
+              },
+              'SÍ, he sido Director(a)',
+              'NO he sido Director(a)'
+            )}
+            {fueDirectorUptpc && renderSelectorUnidades(directorUptpcUnidades, setDirectorUptpcUnidades)}
+          </div>
+
+          {/* 11.2 Director fuera de la Universidad */}
+          <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-800">
+                ¿Ha sido Director(a) de alguna unidad fuera de la Universidad?
+              </label>
+              <p className="text-[11px] text-slate-500">Indique dónde, en qué fecha y el tiempo en el cargo.</p>
+            </div>
+            {renderSiNo(
+              fueDirectorExterno,
+              v => {
+                setFueDirectorExterno(v);
+                if (v && directorExternoDetalle.length === 0) setDirectorExternoDetalle([nuevoCargoExterno()]);
+                if (!v) setDirectorExternoDetalle([]);
+              },
+              'SÍ, he sido Director(a) fuera de la UPTPC',
+              'NO'
+            )}
+            {fueDirectorExterno && renderCargosExternos(directorExternoDetalle, setDirectorExternoDetalle, true)}
+          </div>
+
+          {/* 11.3 Cargo directivo actual en la UPTPC */}
+          <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-800">
+                ¿Actualmente ocupa algún cargo directivo dentro de la UPTPC?
+              </label>
+              <p className="text-[11px] text-slate-500">De ser positiva, indique cuál o cuáles (selección múltiple).</p>
+            </div>
+            {renderSiNo(
+              cargoDirectivoUptpcActual,
+              v => {
+                setCargoDirectivoUptpcActual(v);
+                if (!v) setCargosDirectivosUptpc([]);
+              },
+              'SÍ, ocupo cargo directivo',
+              'NO ocupo cargo directivo'
+            )}
+            {cargoDirectivoUptpcActual && renderSelectorUnidades(cargosDirectivosUptpc, setCargosDirectivosUptpc)}
+          </div>
+
+          {/* 11.4 Cargo directivo actual fuera de la Universidad */}
+          <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-800">
+                ¿Actualmente ocupa algún cargo directivo fuera de la Universidad?
+              </label>
+              <p className="text-[11px] text-slate-500">Indique dónde, desde qué fecha y el tiempo en el cargo.</p>
+            </div>
+            {renderSiNo(
+              cargoDirectivoExternoActual,
+              v => {
+                setCargoDirectivoExternoActual(v);
+                if (v && cargoDirectivoExternoDetalle.length === 0) setCargoDirectivoExternoDetalle([nuevoCargoExterno()]);
+                if (!v) setCargoDirectivoExternoDetalle([]);
+              },
+              'SÍ, ocupo cargo directivo externo',
+              'NO'
+            )}
+            {cargoDirectivoExternoActual &&
+              renderCargosExternos(cargoDirectivoExternoDetalle, setCargoDirectivoExternoDetalle, false)}
+          </div>
+
+          {/* 11.5 Cargo político actual */}
+          <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-800">¿Actualmente ocupa algún cargo político?</label>
+              <p className="text-[11px] text-slate-500">Indique cuál y desde qué fecha.</p>
+            </div>
+            {renderSiNo(
+              cargoPoliticoActual,
+              v => {
+                setCargoPoliticoActual(v);
+                if (!v) {
+                  setCargoPoliticoDetalle('');
+                  setCargoPoliticoDesde('');
+                }
+              },
+              'SÍ, ocupo un cargo político',
+              'NO ocupo cargo político'
+            )}
+            {cargoPoliticoActual && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 animate-slide-in">
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">¿Cuál cargo político?</label>
+                  <input
+                    type="text"
+                    placeholder="Ej. Concejal del Municipio Puerto Cabello"
+                    value={cargoPoliticoDetalle}
+                    onChange={e => setCargoPoliticoDetalle(e.target.value)}
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Desde (fecha)</label>
+                  <input
+                    type="date"
+                    value={cargoPoliticoDesde}
+                    onChange={e => setCargoPoliticoDesde(e.target.value)}
+                    className="w-full text-xs border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-[#0B4D94] focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* MEDIDOR DE COMPLETITUD DEL CENSO */}
+        <div
+          className={`rounded-xl border p-4 space-y-2 ${
+            completitudActual.completo ? 'bg-emerald-50/70 border-emerald-200' : 'bg-amber-50/70 border-amber-200'
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <p className={`text-xs font-bold ${completitudActual.completo ? 'text-emerald-800' : 'text-amber-900'}`}>
+                Completitud de la planilla: {completitudActual.porcentaje}% ({completitudActual.completos}/{completitudActual.total} respuestas)
+              </p>
+              <p className="text-[11px] text-slate-600">
+                {completitudActual.completo
+                  ? 'La planilla supera el umbral y será considerada CENSADA.'
+                  : `Puede guardar el avance. La planilla se considera censada al superar el ${UMBRAL_CENSO_COMPLETO}% de las respuestas solicitadas.`}
+              </p>
+            </div>
+            {completitudActual.faltantes.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setMostrarFaltantes(!mostrarFaltantes)}
+                className="text-[11px] font-bold text-[#0B4D94] hover:underline self-start sm:self-auto"
+              >
+                {mostrarFaltantes ? 'Ocultar' : 'Ver'} respuestas faltantes ({completitudActual.faltantes.length})
+              </button>
+            )}
+          </div>
+          <div className="w-full h-2 bg-white rounded-full overflow-hidden border border-slate-200">
+            <div
+              className={`h-full transition-all duration-500 ${completitudActual.completo ? 'bg-emerald-500' : 'bg-amber-500'}`}
+              style={{ width: `${Math.min(100, completitudActual.porcentaje)}%` }}
+            />
+          </div>
+          {mostrarFaltantes && completitudActual.faltantes.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1 animate-slide-in">
+              {completitudActual.faltantes.map(f => (
+                <span
+                  key={f}
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                    f === 'Fotografía del docente'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : 'bg-white text-slate-600 border-slate-200'
+                  }`}
+                >
+                  {f}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* BOTONES DE ENVÍO */}
         <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-slate-400">
@@ -3364,7 +3824,7 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Completar y Guardar Censo</span>
+                  <span>{completitudActual.completo ? 'Completar y Guardar Censo' : 'Guardar Avance del Censo'}</span>
                 </>
               )}
             </button>

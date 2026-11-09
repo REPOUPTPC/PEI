@@ -1,8 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '@/lib/turso';
+import { calcularCompletitud } from '@/lib/censo';
+import { ensureCensoSchema } from '@/lib/censoSchema';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    // Esquema de completitud del censo y trayectoria directiva (no destructivo)
+    await ensureCensoSchema(db);
+
     if (req.method === 'GET') {
       const { q, profesion, rama, pnf, encuestado, limit = '200', offset = '0' } = req.query;
 
@@ -133,6 +138,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         potencialidades,
         observaciones,
         registrado_por,
+        fue_director_uptpc,
+        director_uptpc_unidades,
+        fue_director_externo,
+        director_externo_detalle,
+        cargo_directivo_uptpc_actual,
+        cargos_directivos_uptpc,
+        cargo_directivo_externo_actual,
+        cargo_directivo_externo_detalle,
+        cargo_politico_actual,
+        cargo_politico_detalle,
+        cargo_politico_desde,
       } = data;
 
       if (!cedula || !nombre_completo) {
@@ -189,6 +205,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Ignorar si ya existen
       }
 
+      // Completitud del censo: solo se considera CENSADO si supera el 90% de las respuestas solicitadas
+      const completitud = calcularCompletitud({ ...data, tipo_profesion: cleanTipoProfesion });
+      const toJson = (v: any) => (typeof v === 'string' ? v : JSON.stringify(v || []));
+
       await db.execute({
         sql: `INSERT OR REPLACE INTO docentes (
           cedula, nombres, apellidos, nombre_completo, fecha_nacimiento, genero, email, telefono, foto_url,
@@ -204,6 +224,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           desarrollo_academico_actual, desarrollo_academico_detalle,
           tutoria_proyectos_activa, tutorias_detalle,
           posee_diplomados, diplomados_detalle, potencialidades, observaciones,
+          fue_director_uptpc, director_uptpc_unidades, fue_director_externo, director_externo_detalle,
+          cargo_directivo_uptpc_actual, cargos_directivos_uptpc, cargo_directivo_externo_actual, cargo_directivo_externo_detalle,
+          cargo_politico_actual, cargo_politico_detalle, cargo_politico_desde,
+          porcentaje_completitud, censo_iniciado,
           encuestado, registrado_por, updated_at
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?, ?, ?,
@@ -219,7 +243,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ?, ?,
           ?, ?,
           ?, ?, ?, ?,
-          1, ?, datetime('now')
+          ?, ?, ?, ?,
+          ?, ?, ?, ?,
+          ?, ?, ?,
+          ?, 1,
+          ?, ?, datetime('now')
         )`,
         args: [
           cleanCedula,
@@ -290,11 +318,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           typeof diplomados_detalle === 'string' ? diplomados_detalle : JSON.stringify(diplomados_detalle || []),
           potencialidades || null,
           observaciones || null,
+          fue_director_uptpc ? 1 : 0,
+          fue_director_uptpc ? toJson(director_uptpc_unidades) : '[]',
+          fue_director_externo ? 1 : 0,
+          fue_director_externo ? toJson(director_externo_detalle) : '[]',
+          cargo_directivo_uptpc_actual ? 1 : 0,
+          cargo_directivo_uptpc_actual ? toJson(cargos_directivos_uptpc) : '[]',
+          cargo_directivo_externo_actual ? 1 : 0,
+          cargo_directivo_externo_actual ? toJson(cargo_directivo_externo_detalle) : '[]',
+          cargo_politico_actual ? 1 : 0,
+          cargo_politico_actual ? cargo_politico_detalle || null : null,
+          cargo_politico_actual ? cargo_politico_desde || null : null,
+          completitud.porcentaje,
+          completitud.completo ? 1 : 0,
           registrado_por || 'SISTEMA',
         ],
       });
 
-      return res.status(200).json({ success: true, message: 'Ficha de docente guardada exitosamente' });
+      return res.status(200).json({
+        success: true,
+        message: completitud.completo
+          ? 'Ficha de docente guardada exitosamente'
+          : 'Avance del censo guardado (planilla en progreso)',
+        completitud,
+      });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

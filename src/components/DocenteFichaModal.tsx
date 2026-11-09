@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getEstadoCenso, getPorcentajeCenso, parseJsonArray, ItemCargoExterno } from '@/lib/censo';
+import { Camera, Vote, Landmark } from 'lucide-react';
 import {
   Docente,
   ItemAcademico,
@@ -387,21 +389,38 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
                   {docente.nombres?.[0] || docente.nombre_completo?.[0] || 'D'}
                 </div>
               )}
-              {docente.encuestado === 1 ? (
-                <span
-                  title="Censado en el PEI"
-                  className="absolute -bottom-1.5 -right-1.5 bg-emerald-500 text-white p-1 rounded-full border-2 border-white shadow-xs"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                </span>
-              ) : (
-                <span
-                  title="Pendiente de Censo"
-                  className="absolute -bottom-1.5 -right-1.5 bg-amber-500 text-white p-1 rounded-full border-2 border-white shadow-xs"
-                >
-                  <Calendar className="w-4 h-4" />
-                </span>
-              )}
+              {(() => {
+                const est = getEstadoCenso(docente);
+                const pct = getPorcentajeCenso(docente);
+                if (est === 'CENSADO') {
+                  return (
+                    <span
+                      title={`Censado en el PEI (${pct}%)`}
+                      className="absolute -bottom-1.5 -right-1.5 bg-emerald-500 text-white p-1 rounded-full border-2 border-white shadow-xs"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                    </span>
+                  );
+                }
+                if (est === 'EN_PROGRESO') {
+                  return (
+                    <span
+                      title={`Censo en Progreso (${pct}%)`}
+                      className="absolute -bottom-1.5 -right-1.5 bg-blue-500 text-white p-1 rounded-full border-2 border-white shadow-xs"
+                    >
+                      <Calendar className="w-4 h-4" />
+                    </span>
+                  );
+                }
+                return (
+                  <span
+                    title="Pendiente de Censo"
+                    className="absolute -bottom-1.5 -right-1.5 bg-amber-500 text-white p-1 rounded-full border-2 border-white shadow-xs"
+                  >
+                    <Calendar className="w-4 h-4" />
+                  </span>
+                );
+              })()}
             </div>
 
             <div className="flex-1 text-center sm:text-left space-y-2">
@@ -412,6 +431,35 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
                 <span className="text-xs font-semibold bg-blue-100 text-[#0B4D94] px-2.5 py-0.5 rounded-lg">
                   {docente.cargo || 'DOCENTE'}
                 </span>
+                {(() => {
+                  const est = getEstadoCenso(docente);
+                  const pct = getPorcentajeCenso(docente);
+                  if (est === 'CENSADO') {
+                    return (
+                      <span className="text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-lg">
+                        Censado ({pct}%)
+                      </span>
+                    );
+                  }
+                  if (est === 'EN_PROGRESO') {
+                    return (
+                      <span className="text-[11px] font-bold bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-lg">
+                        En Progreso ({pct}%)
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-lg">
+                      Pendiente
+                    </span>
+                  );
+                })()}
+                {(!docente.foto_url || !String(docente.foto_url).trim()) && getEstadoCenso(docente) !== 'PENDIENTE' && (
+                  <span className="text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-lg inline-flex items-center gap-1">
+                    <Camera className="w-3 h-3 text-rose-600" />
+                    <span>Sin foto</span>
+                  </span>
+                )}
                 {docente.desde && (
                   <span className="text-xs text-slate-500 flex items-center gap-1">
                     <Calendar className="w-3.5 h-3.5" />
@@ -931,6 +979,122 @@ export const DocenteFichaModal: React.FC<DocenteFichaModalProps> = ({ docente, o
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Trayectoria Directiva y Cargos Públicos */}
+              <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-3 text-xs">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mb-2">
+                  <Landmark className="w-4 h-4 text-[#0B4D94]" />
+                  <span>Trayectoria Directiva y Responsabilidad Pública</span>
+                </h4>
+
+                <div>
+                  <strong className="text-slate-800 block">¿Ha sido Director(a) de alguna unidad de la UPTPC?:</strong>
+                  <span className={`inline-block px-2 py-0.5 text-[11px] rounded font-semibold mt-0.5 ${
+                    docente.fue_director_uptpc === 1
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : 'bg-slate-100 text-slate-600 border border-slate-200'
+                  }`}>
+                    {docente.fue_director_uptpc === 1 ? 'SÍ, ha sido director(a)' : 'NO'}
+                  </span>
+                  {docente.fue_director_uptpc === 1 && parseJsonArray<string>(docente.director_uptpc_unidades).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {parseJsonArray<string>(docente.director_uptpc_unidades).map((u, i) => (
+                        <span key={i} className="bg-blue-50 text-[#0B4D94] border border-blue-200 text-[10px] font-semibold px-2 py-0.5 rounded">
+                          {u}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <strong className="text-slate-800 block">¿Ha sido Director(a) fuera de la Universidad?:</strong>
+                  <span className={`inline-block px-2 py-0.5 text-[11px] rounded font-semibold mt-0.5 ${
+                    docente.fue_director_externo === 1
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : 'bg-slate-100 text-slate-600 border border-slate-200'
+                  }`}>
+                    {docente.fue_director_externo === 1 ? 'SÍ, fuera de la UPTPC' : 'NO'}
+                  </span>
+                  {docente.fue_director_externo === 1 && parseJsonArray<ItemCargoExterno>(docente.director_externo_detalle).length > 0 && (
+                    <div className="space-y-1 mt-1.5">
+                      {parseJsonArray<ItemCargoExterno>(docente.director_externo_detalle).map((c, i) => (
+                        <div key={i} className="p-2 bg-slate-50 border border-slate-200 rounded text-[11px]">
+                          <p className="font-bold text-slate-800">{c.cargo || 'Cargo directivo'} — {c.institucion}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {c.fecha_inicio && `Desde: ${c.fecha_inicio}`}
+                            {c.fecha_fin && ` • Hasta: ${c.fecha_fin}`}
+                            {c.tiempo && ` • Tiempo: ${c.tiempo}`}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <strong className="text-slate-800 block">¿Ocupa cargo directivo actual en la UPTPC?:</strong>
+                  <span className={`inline-block px-2 py-0.5 text-[11px] rounded font-semibold mt-0.5 ${
+                    docente.cargo_directivo_uptpc_actual === 1
+                      ? 'bg-blue-50 text-[#0B4D94] border border-blue-200'
+                      : 'bg-slate-100 text-slate-600 border border-slate-200'
+                  }`}>
+                    {docente.cargo_directivo_uptpc_actual === 1 ? 'SÍ, cargo directivo actual' : 'NO'}
+                  </span>
+                  {docente.cargo_directivo_uptpc_actual === 1 && parseJsonArray<string>(docente.cargos_directivos_uptpc).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {parseJsonArray<string>(docente.cargos_directivos_uptpc).map((u, i) => (
+                        <span key={i} className="bg-[#0B4D94] text-white text-[10px] font-semibold px-2 py-0.5 rounded shadow-2xs">
+                          {u}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <strong className="text-slate-800 block">¿Ocupa cargo directivo actual fuera de la Universidad?:</strong>
+                  <span className={`inline-block px-2 py-0.5 text-[11px] rounded font-semibold mt-0.5 ${
+                    docente.cargo_directivo_externo_actual === 1
+                      ? 'bg-purple-50 text-purple-800 border border-purple-200'
+                      : 'bg-slate-100 text-slate-600 border border-slate-200'
+                  }`}>
+                    {docente.cargo_directivo_externo_actual === 1 ? 'SÍ, cargo directivo externo activo' : 'NO'}
+                  </span>
+                  {docente.cargo_directivo_externo_actual === 1 && parseJsonArray<ItemCargoExterno>(docente.cargo_directivo_externo_detalle).length > 0 && (
+                    <div className="space-y-1 mt-1.5">
+                      {parseJsonArray<ItemCargoExterno>(docente.cargo_directivo_externo_detalle).map((c, i) => (
+                        <div key={i} className="p-2 bg-slate-50 border border-slate-200 rounded text-[11px]">
+                          <p className="font-bold text-slate-800">{c.cargo || 'Cargo directivo'} — {c.institucion}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {c.fecha_inicio && `Desde: ${c.fecha_inicio}`}
+                            {c.tiempo && ` • Tiempo en cargo: ${c.tiempo}`}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <strong className="text-slate-800 block">¿Ocupa algún cargo político actual?:</strong>
+                  <span className={`inline-block px-2 py-0.5 text-[11px] rounded font-semibold mt-0.5 ${
+                    docente.cargo_politico_actual === 1
+                      ? 'bg-rose-50 text-rose-800 border border-rose-200'
+                      : 'bg-slate-100 text-slate-600 border border-slate-200'
+                  }`}>
+                    {docente.cargo_politico_actual === 1 ? 'SÍ, cargo político activo' : 'NO'}
+                  </span>
+                  {docente.cargo_politico_actual === 1 && docente.cargo_politico_detalle && (
+                    <div className="p-2 bg-rose-50/70 border border-rose-200 rounded text-[11px] mt-1.5">
+                      <p className="font-bold text-rose-900">{docente.cargo_politico_detalle}</p>
+                      {docente.cargo_politico_desde && (
+                        <p className="text-[10px] text-rose-700">Desde: {docente.cargo_politico_desde}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

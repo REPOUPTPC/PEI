@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import db from '@/lib/turso';
+import { ensureCensoSchema } from '@/lib/censoSchema';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -37,6 +38,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (tipo_limpieza === 'REINICIAR_CENSO') {
+      // Garantiza columnas de completitud / trayectoria directiva antes de reiniciarlas
+      await ensureCensoSchema(db);
+
       // Mantiene la lista básica de docentes (cédula, nombre, cargo, fecha ingreso)
       // pero limpia todas las respuestas de censo y lo marca como no encuestado
       const updateRes = await db.execute(`
@@ -103,6 +107,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           diplomados_detalle = NULL,
           potencialidades = NULL,
           observaciones = NULL,
+          porcentaje_completitud = NULL,
+          censo_iniciado = 0,
+          fue_director_uptpc = 0,
+          director_uptpc_unidades = NULL,
+          fue_director_externo = 0,
+          director_externo_detalle = NULL,
+          cargo_directivo_uptpc_actual = 0,
+          cargos_directivos_uptpc = NULL,
+          cargo_directivo_externo_actual = 0,
+          cargo_directivo_externo_detalle = NULL,
+          cargo_politico_actual = 0,
+          cargo_politico_detalle = NULL,
+          cargo_politico_desde = NULL,
           updated_at = datetime('now')
       `);
 
