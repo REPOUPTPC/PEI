@@ -186,7 +186,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
-      const cleanCedula = cedula.trim().toUpperCase();
+      let cleanCedula = cedula.trim().toUpperCase();
+      const digitsOnly = cleanCedula.replace(/\D/g, '');
+
+      // Evitar duplicados: verificar si el docente ya existe en BD bajo formato con V-, sin V- o dígitos
+      const existingMatch = await db.execute({
+        sql: `
+          SELECT cedula FROM docentes 
+          WHERE UPPER(cedula) = ?
+             OR UPPER(cedula) = ?
+             OR UPPER(cedula) = ?
+             OR REPLACE(REPLACE(REPLACE(UPPER(cedula), 'V-', ''), 'E-', ''), ' ', '') = ?
+          ORDER BY 
+            CASE WHEN UPPER(cedula) LIKE 'V-%' THEN 1 ELSE 2 END,
+            COALESCE(porcentaje_completitud, 0) DESC
+          LIMIT 1
+        `,
+        args: [cleanCedula, `V-${digitsOnly}`, `E-${digitsOnly}`, digitsOnly || cleanCedula],
+      });
+
+      if (existingMatch.rows.length > 0 && existingMatch.rows[0]?.cedula) {
+        // Usar la clave primaria existente (preferentemente V-XXXXXXX) para actualizar el mismo registro
+        const existingKey = String(existingMatch.rows[0].cedula).trim().toUpperCase();
+        cleanCedula = existingKey;
+      } else if (!cleanCedula.startsWith('V-') && !cleanCedula.startsWith('E-') && digitsOnly) {
+        // Estandarizar a formato canónico institucional V-XXXXXXX
+        cleanCedula = `V-${digitsOnly}`;
+      }
 
       try {
         await db.execute('ALTER TABLE docentes ADD COLUMN publicaciones_repositorio INTEGER DEFAULT 0;');

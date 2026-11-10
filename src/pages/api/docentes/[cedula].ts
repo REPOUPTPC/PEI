@@ -8,13 +8,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Cédula no proporcionada' });
   }
 
-  const cleanCedula = cedula.trim().toUpperCase();
+  const rawInput = cedula.trim().toUpperCase();
+  const digitsOnly = rawInput.replace(/\D/g, '');
+  const withV = digitsOnly ? `V-${digitsOnly}` : rawInput;
+  const withE = digitsOnly ? `E-${digitsOnly}` : rawInput;
 
   try {
     if (req.method === 'GET') {
+      // Búsqueda flexible por cédula exacta, con prefijo V-, E- o solo dígitos
       const result = await db.execute({
-        sql: 'SELECT * FROM docentes WHERE UPPER(cedula) = ?',
-        args: [cleanCedula],
+        sql: `
+          SELECT * FROM docentes 
+          WHERE UPPER(cedula) = ?
+             OR UPPER(cedula) = ?
+             OR UPPER(cedula) = ?
+             OR REPLACE(REPLACE(REPLACE(UPPER(cedula), 'V-', ''), 'E-', ''), ' ', '') = ?
+          ORDER BY 
+            COALESCE(porcentaje_completitud, 0) DESC,
+            COALESCE(encuestado, 0) DESC,
+            datetime(COALESCE(updated_at, created_at, '1970-01-01')) DESC
+          LIMIT 1
+        `,
+        args: [rawInput, withV, withE, digitsOnly || rawInput],
       });
 
       if (result.rows.length === 0) {
@@ -26,8 +41,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (req.method === 'DELETE') {
       await db.execute({
-        sql: 'DELETE FROM docentes WHERE UPPER(cedula) = ?',
-        args: [cleanCedula],
+        sql: `
+          DELETE FROM docentes 
+          WHERE UPPER(cedula) = ?
+             OR UPPER(cedula) = ?
+             OR UPPER(cedula) = ?
+             OR REPLACE(REPLACE(REPLACE(UPPER(cedula), 'V-', ''), 'E-', ''), ' ', '') = ?
+        `,
+        args: [rawInput, withV, withE, digitsOnly || rawInput],
       });
 
       return res.status(200).json({ success: true, message: 'Docente eliminado correctamente' });
@@ -39,4 +60,3 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: error.message || 'Error del servidor' });
   }
 }
-

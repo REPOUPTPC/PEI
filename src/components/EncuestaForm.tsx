@@ -48,6 +48,8 @@ import {
 import { useToast } from './Toast';
 import {
   calcularCompletitud,
+  getEstadoCenso,
+  getPorcentajeCenso,
   UMBRAL_CENSO_COMPLETO,
   UNIDADES_DIRECTIVAS_UPTPC,
   ItemCargoExterno,
@@ -317,133 +319,19 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
     }
   };
 
-  // Hydrate initial docente if provided
-  useEffect(() => {
-    if (initialDocente) {
-      setCedula(initialDocente.cedula || '');
-      setNombreCompleto(initialDocente.nombre_completo || '');
-      setCargo(initialDocente.cargo || 'DOCENTE');
-      setDesde(initialDocente.desde || '');
-      setFechaNacimiento(initialDocente.fecha_nacimiento || '');
-      setGenero(initialDocente.genero || 'MASCULINO');
-      setEmail(initialDocente.email || '');
-      setTelefono(initialDocente.telefono || '');
-      setFotoUrl(initialDocente.foto_url || '');
-
-      setIdEstadoProcedencia(initialDocente.id_estado_procedencia || '');
-      setIdMunicipioProcedencia(initialDocente.id_municipio_procedencia || '');
-      setIdParroquiaProcedencia(initialDocente.id_parroquia_procedencia || '');
-
-      setIdEstado(initialDocente.id_estado || '');
-      setIdMunicipio(initialDocente.id_municipio || '');
-      setIdParroquia(initialDocente.id_parroquia || '');
-      setDireccion(initialDocente.direccion || '');
-
-      if (
-        initialDocente.id_estado_procedencia &&
-        initialDocente.id_estado &&
-        initialDocente.id_estado_procedencia === initialDocente.id_estado &&
-        initialDocente.id_municipio_procedencia === initialDocente.id_municipio
-      ) {
-        setMismaProcedenciaResidencia(true);
-      }
-
-      // 1. Formación Académica (Múltiples Títulos)
-      const loadedTitulos = parseJsonSafe(initialDocente.titulos_adicionales);
-      if (loadedTitulos.length > 0) {
-        setTitulos(loadedTitulos);
-      } else if (initialDocente.carrera_pregrado) {
-        setTitulos([
-          {
-            tipo_profesion: initialDocente.tipo_profesion || 'INGENIERO',
-            carrera: initialDocente.carrera_pregrado || '',
-            rama_especifica: initialDocente.rama_especifica || '',
-            universidad: initialDocente.universidad_pregrado || '',
-            anio: initialDocente.anio_pregrado || '',
-          },
-        ]);
-      } else {
-        setTitulos([
-          {
-            tipo_profesion: 'INGENIERO',
-            carrera: '',
-            rama_especifica: '',
-            universidad: '',
-            anio: '',
-          },
-        ]);
-      }
-
-      setPoseeEspecialidad(initialDocente.posee_especialidad === 1);
-      setEspecialidades(parseJsonSafe(initialDocente.especialidades));
-
-      setPoseeMaestria(initialDocente.posee_maestria === 1);
-      setMaestrias(parseJsonSafe(initialDocente.maestrias));
-
-      setPoseeDoctorado(initialDocente.posee_doctorado === 1);
-      setDoctorados(parseJsonSafe(initialDocente.doctorados));
-
-      setComponenteDocente(initialDocente.componente_docente === 1);
-      setUsuarioRecitven(initialDocente.usuario_recitven === 1);
-      setPublicacionesRepositorio(initialDocente.publicaciones_repositorio === 1);
-      setColegiado(initialDocente.colegiado === 1);
-      setNombreColegio(initialDocente.nombre_colegio || '');
-      setNumeroColegio(initialDocente.numero_colegio || '');
-
-      setSelectedPnfs(parseJsonSafe(initialDocente.pnfs));
-      setConoceLineasPnf(initialDocente.conoce_lineas_pnf === 1);
-      setLineasPnfDetalle(initialDocente.lineas_pnf_detalle || '');
-      setSelectedAsignaturas(parseJsonSafe(initialDocente.asignaturas_imparte));
-
-      // Áreas de interés investigativo
-      const loadedAreas = parseJsonSafe(initialDocente.areas_interes_investigativo);
-      if (loadedAreas.length > 0) {
-        setSelectedAreas(loadedAreas);
-      } else if (initialDocente.linea_investigacion) {
-        const split = initialDocente.linea_investigacion
-          .split(/[,;\n]/)
-          .map((s: string) => s.trim())
-          .filter(Boolean);
-        setSelectedAreas(split);
-      } else {
-        setSelectedAreas([]);
-      }
-
-      setInvestigacionEnDesarrollo(initialDocente.investigacion_en_desarrollo === 1);
-      setInvestigacionInstituto(initialDocente.investigacion_instituto || '');
-      setInvestigacionTitulo(initialDocente.investigacion_titulo || '');
-      setInvestigacionLinea(initialDocente.investigacion_linea || '');
-
-      setPublicacionesLibros(initialDocente.publicaciones_libros === 1);
-      setLibros(parseJsonSafe(initialDocente.libros_detalle));
-
-      setPublicacionesArticulos(initialDocente.publicaciones_articulos === 1);
-      setArticulos(parseJsonSafe(initialDocente.articulos_detalle));
-
-      // Congresos y Seminarios
-      setParticipadoPonente(initialDocente.participado_ponente === 1);
-      setParticipadoParticipante(initialDocente.participado_participante === 1);
-      setEventos(parseJsonSafe(initialDocente.eventos_detalle));
-
-      // Desarrollo Académico
-      setDesarrolloAcademicoActual(initialDocente.desarrollo_academico_actual === 1);
-      setDesarrollosAcademicos(parseJsonSafe(initialDocente.desarrollo_academico_detalle));
-
-      // Tutoría de Proyectos
-      setTutoriaProyectosActiva(initialDocente.tutoria_proyectos_activa === 1);
-      setTutoriasProyectos(parseJsonSafe(initialDocente.tutorias_detalle));
-
-      setPoseeDiplomados(initialDocente.posee_diplomados === 1);
-      setDiplomados(parseJsonSafe(initialDocente.diplomados_detalle));
-      setPotencialidades(initialDocente.potencialidades || '');
-      setObservaciones(initialDocente.observaciones || '');
-
-      hydrateTrayectoria(initialDocente);
+  const parseJsonSafe = (str?: string) => {
+    if (!str) return [];
+    try {
+      const p = JSON.parse(str);
+      return Array.isArray(p) ? p : [];
+    } catch {
+      return [];
     }
-  }, [initialDocente]);
+  };
 
   // Hidratar Trayectoria Directiva y Cargos
   const hydrateTrayectoria = (doc: any) => {
+    if (!doc) return;
     setFueDirectorUptpc(doc.fue_director_uptpc === 1);
     setDirectorUptpcUnidades(parseJsonSafe(doc.director_uptpc_unidades));
     setFueDirectorExterno(doc.fue_director_externo === 1);
@@ -474,118 +362,181 @@ export const EncuestaForm: React.FC<EncuestaFormProps> = ({
     tiempo: '',
   });
 
-  const parseJsonSafe = (str?: string) => {
-    if (!str) return [];
-    try {
-      const p = JSON.parse(str);
-      return Array.isArray(p) ? p : [];
-    } catch {
-      return [];
+  // Hidratación completa de todos los datos existentes del docente
+  const hydrateDocenteCompleto = (doc: any) => {
+    if (!doc) return;
+    setCedula(doc.cedula || '');
+    setNombreCompleto(doc.nombre_completo || '');
+    setCargo(doc.cargo || 'DOCENTE');
+    setDesde(doc.desde || '');
+    setFechaNacimiento(doc.fecha_nacimiento || '');
+    setGenero(doc.genero || 'MASCULINO');
+    setEmail(doc.email || '');
+    setTelefono(doc.telefono || '');
+    setFotoUrl(doc.foto_url || '');
+
+    setIdEstadoProcedencia(doc.id_estado_procedencia || '');
+    setIdMunicipioProcedencia(doc.id_municipio_procedencia || '');
+    setIdParroquiaProcedencia(doc.id_parroquia_procedencia || '');
+
+    setIdEstado(doc.id_estado || '');
+    setIdMunicipio(doc.id_municipio || '');
+    setIdParroquia(doc.id_parroquia || '');
+    setDireccion(doc.direccion || '');
+
+    if (
+      doc.id_estado_procedencia &&
+      doc.id_estado &&
+      doc.id_estado_procedencia === doc.id_estado &&
+      doc.id_municipio_procedencia === doc.id_municipio
+    ) {
+      setMismaProcedenciaResidencia(true);
     }
+
+    // 1. Formación Académica (Múltiples Títulos)
+    const loadedTitulos = parseJsonSafe(doc.titulos_adicionales);
+    if (loadedTitulos.length > 0) {
+      setTitulos(loadedTitulos);
+    } else if (doc.carrera_pregrado) {
+      setTitulos([
+        {
+          tipo_profesion: doc.tipo_profesion || 'INGENIERO',
+          carrera: doc.carrera_pregrado || '',
+          rama_especifica: doc.rama_especifica || '',
+          universidad: doc.universidad_pregrado || '',
+          anio: doc.anio_pregrado || '',
+        },
+      ]);
+    } else {
+      setTitulos([
+        {
+          tipo_profesion: doc.tipo_profesion || 'INGENIERO',
+          carrera: '',
+          rama_especifica: '',
+          universidad: '',
+          anio: '',
+        },
+      ]);
+    }
+
+    // 2. Postgrados
+    setPoseeEspecialidad(doc.posee_especialidad === 1);
+    setEspecialidades(parseJsonSafe(doc.especialidades));
+
+    setPoseeMaestria(doc.posee_maestria === 1);
+    setMaestrias(parseJsonSafe(doc.maestrias));
+
+    setPoseeDoctorado(doc.posee_doctorado === 1);
+    setDoctorados(parseJsonSafe(doc.doctorados));
+
+    // 3. Docencia y Gremio
+    setComponenteDocente(doc.componente_docente === 1);
+    setUsuarioRecitven(doc.usuario_recitven === 1);
+    setPublicacionesRepositorio(doc.publicaciones_repositorio === 1);
+    setColegiado(doc.colegiado === 1);
+    setNombreColegio(doc.nombre_colegio || '');
+    setNumeroColegio(doc.numero_colegio || '');
+
+    setSelectedPnfs(parseJsonSafe(doc.pnfs));
+    setConoceLineasPnf(doc.conoce_lineas_pnf === 1);
+    setLineasPnfDetalle(doc.lineas_pnf_detalle || '');
+    setSelectedAsignaturas(parseJsonSafe(doc.asignaturas_imparte));
+
+    // 4. Áreas de Interés Investigativo y Líneas
+    const loadedAreas = parseJsonSafe(doc.areas_interes_investigativo);
+    if (loadedAreas.length > 0) {
+      setSelectedAreas(loadedAreas);
+    } else if (doc.linea_investigacion) {
+      const split = doc.linea_investigacion
+        .split(/[,;\n]/)
+        .map((s: string) => s.trim())
+        .filter(Boolean);
+      setSelectedAreas(split);
+    } else {
+      setSelectedAreas([]);
+    }
+
+    setInvestigacionEnDesarrollo(doc.investigacion_en_desarrollo === 1);
+    setInvestigacionInstituto(doc.investigacion_instituto || '');
+    setInvestigacionTitulo(doc.investigacion_titulo || '');
+    setInvestigacionLinea(doc.investigacion_linea || '');
+
+    // 5. Publicaciones
+    setPublicacionesLibros(doc.publicaciones_libros === 1);
+    setLibros(parseJsonSafe(doc.libros_detalle));
+
+    setPublicacionesArticulos(doc.publicaciones_articulos === 1);
+    setArticulos(parseJsonSafe(doc.articulos_detalle));
+
+    // 6. Congresos y Seminarios
+    setParticipadoPonente(doc.participado_ponente === 1);
+    setParticipadoParticipante(doc.participado_participante === 1);
+    setEventos(parseJsonSafe(doc.eventos_detalle));
+
+    // 7. Desarrollo Académico
+    setDesarrolloAcademicoActual(doc.desarrollo_academico_actual === 1);
+    setDesarrollosAcademicos(parseJsonSafe(doc.desarrollo_academico_detalle));
+
+    // 8. Tutoría de Proyectos
+    setTutoriaProyectosActiva(doc.tutoria_proyectos_activa === 1);
+    setTutoriasProyectos(parseJsonSafe(doc.tutorias_detalle));
+
+    // 9. Diplomados y Potencialidades
+    setPoseeDiplomados(doc.posee_diplomados === 1);
+    setDiplomados(parseJsonSafe(doc.diplomados_detalle));
+    setPotencialidades(doc.potencialidades || '');
+    setObservaciones(doc.observaciones || '');
+
+    // 10. Trayectoria Directiva y Cargos
+    hydrateTrayectoria(doc);
   };
 
-  // Live lookup by Cédula
-  const handleLookupCedula = async (val: string) => {
-    const clean = val.trim().toUpperCase();
-    setCedula(clean);
+  // Hidratar docente inicial si viene por navegación / edición
+  useEffect(() => {
+    if (initialDocente) {
+      hydrateDocenteCompleto(initialDocente);
+    }
+  }, [initialDocente]);
 
-    if (clean.length >= 6) {
+  // Búsqueda en tiempo real por Cédula: autollena la planilla completa si ya existe
+  const handleLookupCedula = async (val: string) => {
+    setCedula(val);
+    const cleanDigits = val.replace(/\D/g, '');
+
+    if (cleanDigits.length >= 6) {
       setSearchingCedula(true);
       try {
-        const res = await fetch(`/api/docentes/${encodeURIComponent(clean)}`);
+        const res = await fetch(`/api/docentes/${encodeURIComponent(val.trim())}`);
         const data = await res.json();
         if (data.success && data.docente) {
           const doc = data.docente;
-          setNombreCompleto(doc.nombre_completo || '');
-          setCargo(doc.cargo || 'DOCENTE');
-          setDesde(doc.desde || '');
-          if (doc.encuestado === 1 || doc.censo_iniciado === 1) {
+          // Autollenar la totalidad de la planilla con la información existente
+          hydrateDocenteCompleto(doc);
+
+          const est = getEstadoCenso(doc);
+          const pct = getPorcentajeCenso(doc);
+          if (est === 'CENSADO') {
             showToast(
               'info',
-              doc.encuestado === 1 ? 'Docente ya censado' : 'Censo en progreso',
-              'Cargando datos previos para actualización.'
+              'Docente ya censado',
+              `Se autollenaron los datos existentes de ${doc.nombre_completo} (${pct}% completado). Puede actualizar cualquier campo.`
             );
-
-            if (doc.foto_url) setFotoUrl(doc.foto_url);
-            if (doc.fecha_nacimiento) setFechaNacimiento(doc.fecha_nacimiento);
-            if (doc.genero) setGenero(doc.genero);
-            if (doc.email) setEmail(doc.email);
-            if (doc.telefono) setTelefono(doc.telefono);
-
-            setIdEstadoProcedencia(doc.id_estado_procedencia || '');
-            setIdMunicipioProcedencia(doc.id_municipio_procedencia || '');
-            setIdParroquiaProcedencia(doc.id_parroquia_procedencia || '');
-
-            setIdEstado(doc.id_estado || '');
-            setIdMunicipio(doc.id_municipio || '');
-            setIdParroquia(doc.id_parroquia || '');
-            setDireccion(doc.direccion || '');
-
-            if (
-              doc.id_estado_procedencia &&
-              doc.id_estado &&
-              doc.id_estado_procedencia === doc.id_estado &&
-              doc.id_municipio_procedencia === doc.id_municipio
-            ) {
-              setMismaProcedenciaResidencia(true);
-            }
-
-            // Hidratar campos completos
-            const loadedTitulos = parseJsonSafe(doc.titulos_adicionales);
-            if (loadedTitulos.length > 0) {
-              setTitulos(loadedTitulos);
-            } else if (doc.carrera_pregrado) {
-              setTitulos([
-                {
-                  tipo_profesion: doc.tipo_profesion || 'INGENIERO',
-                  carrera: doc.carrera_pregrado || '',
-                  rama_especifica: doc.rama_especifica || '',
-                  universidad: doc.universidad_pregrado || '',
-                  anio: doc.anio_pregrado || '',
-                },
-              ]);
-            }
-
-            const loadedAreas = parseJsonSafe(doc.areas_interes_investigativo);
-            if (loadedAreas.length > 0) {
-              setSelectedAreas(loadedAreas);
-            } else if (doc.linea_investigacion) {
-              const split = doc.linea_investigacion
-                .split(/[,;\n]/)
-                .map((s: string) => s.trim())
-                .filter(Boolean);
-              setSelectedAreas(split);
-            }
-
-            setParticipadoPonente(doc.participado_ponente === 1);
-            setParticipadoParticipante(doc.participado_participante === 1);
-            setEventos(parseJsonSafe(doc.eventos_detalle));
-
-            setDesarrolloAcademicoActual(doc.desarrollo_academico_actual === 1);
-            setDesarrollosAcademicos(parseJsonSafe(doc.desarrollo_academico_detalle));
-
-            setTutoriaProyectosActiva(doc.tutoria_proyectos_activa === 1);
-            setTutoriasProyectos(parseJsonSafe(doc.tutorias_detalle));
-
-            setComponenteDocente(doc.componente_docente === 1);
-            setUsuarioRecitven(doc.usuario_recitven === 1);
-            setPublicacionesRepositorio(doc.publicaciones_repositorio === 1);
-            setColegiado(doc.colegiado === 1);
-            setNombreColegio(doc.nombre_colegio || '');
-            setNumeroColegio(doc.numero_colegio || '');
-
-            setSelectedPnfs(parseJsonSafe(doc.pnfs));
-            setConoceLineasPnf(doc.conoce_lineas_pnf === 1);
-            setLineasPnfDetalle(doc.lineas_pnf_detalle || '');
-            setSelectedAsignaturas(parseJsonSafe(doc.asignaturas_imparte));
-
-            hydrateTrayectoria(doc);
+          } else if (est === 'EN_PROGRESO') {
+            showToast(
+              'info',
+              'Censo en progreso',
+              `Se autollenó el avance previo de ${doc.nombre_completo} (${pct}% completado). Continúe completando las respuestas.`
+            );
           } else {
-            showToast('success', 'Docente Activo Reconocido', `${doc.nombre_completo} (${doc.cargo})`);
+            showToast(
+              'success',
+              'Docente activo reconocido',
+              `Se autollenaron los datos institucionales existentes de ${doc.nombre_completo}.`
+            );
           }
         }
       } catch (err) {
-        // Not found, continues normal registration
+        // Not found, continúa registro normal
       } finally {
         setSearchingCedula(false);
       }
